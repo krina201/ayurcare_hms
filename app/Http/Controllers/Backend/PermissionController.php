@@ -4,11 +4,8 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Role;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
-
 
 class PermissionController extends Controller
 {
@@ -27,7 +24,14 @@ class PermissionController extends Controller
     {
         $pagename = 'Permission';
         $breadcrumb = 'Permission List';
-        $permission = Permission::all();
+        $query = Permission::query();
+        if ($q = request('q')) {
+            $query->where('name', 'like', "%{$q}%");
+        }
+        $perPage = (int) request('per_page', 10);
+        if ($perPage < 1) $perPage = 10;
+        if ($perPage > 100) $perPage = 100;
+        $permission = $query->paginate($perPage)->withQueryString();
         return view('backend.permission.index', compact('pagename', 'breadcrumb', 'permission'));
     }
 
@@ -44,7 +48,8 @@ class PermissionController extends Controller
     {
 
         // Validate the request data
-        $validatedData = $request->validate(
+        $validator = Validator::make(
+            $request->all(),
             [
                 'name' => 'required|string|max:255|unique:permissions,name',
             ],
@@ -56,10 +61,13 @@ class PermissionController extends Controller
             ]
         );
 
+        // If validation fails, redirect back with errors
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
         $permission = new Permission();
-        $permission->name = $validatedData['name'];
-        // $permission->created_by = Auth::id();
-        // $permission->updated_by = Auth::id();
+        $permission->name = $request->name;
 
         // Save the permission
         if ($permission->save()) {
@@ -79,7 +87,14 @@ class PermissionController extends Controller
 
         // Use index view with inline form for edit mode (same design as User module)
         $editPermission = $permission;
-        $permissions = Permission::all();
+        $query = Permission::query();
+        if ($q = request('q')) {
+            $query->where('name', 'like', "%{$q}%");
+        }
+        $perPage = (int) request('per_page', 10);
+        if ($perPage < 1) $perPage = 10;
+        if ($perPage > 100) $perPage = 100;
+        $permissions = $query->paginate($perPage)->withQueryString();
         return view('backend.permission.index', compact('pagename', 'breadcrumb', 'editPermission'))->with('permission', $permissions);
     }
 
@@ -87,26 +102,36 @@ class PermissionController extends Controller
     public function update(Request $request, $id)
     {
         // Validate the request data
-        $validatedData = $request->validate(
+        $validator = Validator::make(
+            $request->all(),
             [
-                'name' => 'required|string|max:255|unique:permissions,name,' . $id . ',id',
+                'name' => 'required|string|max:255|unique:permissions,name,' . $id,
             ],
             [
                 'name.required' => 'Permission field is required.',
-                'name.string' => 'Permission must be a valid string.',
-                'name.max' => 'Permission may not be greater than 255 characters.',
-                'name.unique' => 'Permission is already taken.',
+                'name.string'   => 'Permission must be a valid string.',
+                'name.max'      => 'Permission may not be greater than 255 characters.',
+                'name.unique'   => 'Permission is already taken.',
             ]
         );
+
+        // If validation fails, redirect back with errors
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        // Find and update the permission
         $permission = Permission::findOrFail($id);
-        $permission->name = $validatedData['name'];
+        $permission->name = $request->name;
         // $permission->updated_by = Auth::id();
+
         if ($permission->save()) {
-            return redirect()->route('permission')->with('success', 'Permission update Successfully');
+            return redirect()->route('permission')->with('success', 'Permission updated successfully.');
         } else {
-            return redirect()->route('permission')->with('error', "Something Wrong On Data Save");
+            return redirect()->route('permission')->with('error', 'Something went wrong while saving data.');
         }
     }
+
 
     // use for delete
     public function destroy($id)
@@ -115,7 +140,8 @@ class PermissionController extends Controller
 
         // delete user from database
         if ($permission->delete()) {
-            return redirect()->route('permission')->with('success', 'Permission deleted Successfully');
+            return response()->json(['success' => true, 'message' => 'Permission deleted successfully.']);
         }
+        return response()->json(['success' => false, 'message' => 'Failed to delete permission.'], 500);
     }
 }

@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
+use App\Helpers\LogHelper;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Validator;
+
 
 class PatientController extends Controller
 {
@@ -26,49 +27,8 @@ class PatientController extends Controller
     //  Display the patient registration page.
     public function index(Request $request)
     {
-
         $patients = Patient::latest()->limit(10)->get();
-
-        // Calculate dynamic stats
-        $todayRegistrations = Patient::whereDate('registration_date', today())->count();
-        $yesterdayRegistrations = Patient::whereDate('registration_date', today()->subDay())->count();
-        $trend = $yesterdayRegistrations > 0 ? round((($todayRegistrations - $yesterdayRegistrations) / $yesterdayRegistrations) * 100, 1) : 0;
-
-        $activeOPD = Patient::where('registration_type', 'OPD')->count();
-        $activeIPD = Patient::where('registration_type', 'IPD')->count();
-
-        $stats = [
-            'today_registrations' => $todayRegistrations,
-            'trend' => $trend,
-            'active_opd' => $activeOPD,
-            'active_ipd' => $activeIPD,
-            'panchkarma_treatments' => '' // Placeholder - you can make this dynamic later
-        ];
-
-        // Normalize keys to what the view expects
-        $todayTrendType = $todayRegistrations > $yesterdayRegistrations ? 'up' : ($todayRegistrations < $yesterdayRegistrations ? 'down' : 'flat');
-        $todayTrendText = $yesterdayRegistrations > 0
-            ? (abs(round((($todayRegistrations - $yesterdayRegistrations) / $yesterdayRegistrations) * 100, 1)) . '% vs yesterday')
-            : ($todayRegistrations > 0 ? 'New activity' : 'No change');
-
-        $stats = [
-            'todayRegistrations' => $todayRegistrations,
-            'todayRegistrationsTrend' => [
-                'type' => $todayTrendType,
-                'text' => $todayTrendText,
-            ],
-            'activeOpdCount' => $activeOPD,
-            'activeOpdTrend' => [
-                'type' => 'flat',
-                'text' => 'Stable',
-            ],
-            'activeIpdCount' => $activeIPD,
-            'activeIpdTrend' => [
-                'type' => 'flat',
-                'text' => 'Stable',
-            ],
-            'panchkarmaTreatments' => 15,
-        ];
+        $stats = $this->getDashboardStats();
 
         // Build search results (optional filters)
         $searchQuery = Patient::query();
@@ -106,22 +66,32 @@ class PatientController extends Controller
     public function store(Request $request)
     {
 
-        $validated = $request->validate([
-            'full_name' => 'required|string|max:255',
-            'gender' => 'required|in:male,female,other',
-            'age' => 'required|integer|min:0|max:150',
-            'mobile' => 'required|digits:10',
-            'emergency_contact' => 'required|digits:10',
-            'aadhaar_number' => 'required|digits:12',
-            'address' => 'required|string',
-            'allergies' => 'required|string|max:255',
-            'prakriti' => 'required|string|in:Vata,Pitta,Kapha,Vata-Pitta,Pitta-Kapha,Vata-Kapha,Vata-Pitta-Kapha',
-            'doshas' => 'required|array|min:1',
-            'doshas.*' => 'required|in:Vata,Pitta,Kapha',
-            'registration_date' => 'required|date',
-            'registration_type' => 'required|in:OPD,IPD',
-            'photo' => 'required|image|max:2048',
-        ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'full_name' => 'required|string|max:255',
+                'gender' => 'required|in:male,female,other',
+                'age' => 'required|integer|min:0|max:150',
+                'mobile' => 'required|digits:10',
+                'emergency_contact' => 'required|digits:10',
+                'aadhaar_number' => 'required|digits:12',
+                'address' => 'required|string',
+                'allergies' => 'required|string|max:255',
+                'prakriti' => 'required|string|in:Vata,Pitta,Kapha,Vata-Pitta,Pitta-Kapha,Vata-Kapha,Vata-Pitta-Kapha',
+                'doshas' => 'required|array|min:1',
+                'doshas.*' => 'required|in:Vata,Pitta,Kapha',
+                'registration_date' => 'required|date',
+                'registration_type' => 'required|in:OPD,IPD',
+                'photo' => 'required|image|max:2048',
+            ]
+        );
+
+        // If validation fails, redirect back with errors
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $validated = $validator->validated();
 
         // Store photo under public/backend-assets/media/uploads/products
         $photo = $request->file('photo');
@@ -154,53 +124,21 @@ class PatientController extends Controller
 
         ]);
 
-        return redirect()->route('patients')->with('status', 'Patient registered: ' . $patient->uhid);
+        // Save the user
+        if ($patient->save()) {
+            LogHelper::logActivity('Insert', $patient->id, 'patient', $patient->toArray());  // For Insert 
+
+            return redirect()->route('patients')->with('success', 'Patient added successfully');
+        } else {
+            return redirect()->route('patients')->with('error', 'Something went wrong while saving the Patient');
+        }
     }
 
     //  Show the form for editing the specified patient.
     public function edit(Patient $patient)
     {
         $patients = Patient::latest()->limit(10)->get();
-
-        $todayRegistrations = Patient::whereDate('registration_date', today())->count();
-        $yesterdayRegistrations = Patient::whereDate('registration_date', today()->subDay())->count();
-        $trend = $yesterdayRegistrations > 0 ? round((($todayRegistrations - $yesterdayRegistrations) / $yesterdayRegistrations) * 100, 1) : 0;
-
-        $activeOPD = Patient::where('registration_type', 'OPD')->count();
-        $activeIPD = Patient::where('registration_type', 'IPD')->count();
-
-        $stats = [
-            'today_registrations' => $todayRegistrations,
-            'trend' => $trend,
-            'active_opd' => $activeOPD,
-            'active_ipd' => $activeIPD,
-            'panchkarma_treatments' => 15,
-        ];
-
-        // Normalize keys to what the view expects
-        $todayTrendType = $todayRegistrations > $yesterdayRegistrations ? 'up' : ($todayRegistrations < $yesterdayRegistrations ? 'down' : 'flat');
-        $todayTrendText = $yesterdayRegistrations > 0
-            ? (abs(round((($todayRegistrations - $yesterdayRegistrations) / $yesterdayRegistrations) * 100, 1)) . '% vs yesterday')
-            : ($todayRegistrations > 0 ? 'New activity' : 'No change');
-
-        $stats = [
-            'todayRegistrations' => $todayRegistrations,
-            'todayRegistrationsTrend' => [
-                'type' => $todayTrendType,
-                'text' => $todayTrendText,
-            ],
-            'activeOpdCount' => $activeOPD,
-            'activeOpdTrend' => [
-                'type' => 'flat',
-                'text' => 'Stable',
-            ],
-            'activeIpdCount' => $activeIPD,
-            'activeIpdTrend' => [
-                'type' => 'flat',
-                'text' => 'Stable',
-            ],
-            'panchkarmaTreatments' => 15,
-        ];
+        $stats = $this->getDashboardStats();
 
         return view('backend.patients.index', compact('patients', 'stats', 'patient'));
     }
@@ -208,22 +146,32 @@ class PatientController extends Controller
     //  Update the specified patient in storage.
     public function update(Request $request, Patient $patient)
     {
-        $validated = $request->validate([
-            'full_name' => 'required|string|max:255',
-            'gender' => 'required|in:male,female,other',
-            'age' => 'required|integer|min:0|max:150',
-            'mobile' => 'required|digits:10',
-            'emergency_contact' => 'required|digits:10',
-            'aadhaar_number' => 'required|digits:12',
-            'address' => 'required|string',
-            'allergies' => 'required|string|max:255',
-            'prakriti' => 'required|string|in:Vata,Pitta,Kapha,Vata-Pitta,Pitta-Kapha,Vata-Kapha,Vata-Pitta-Kapha',
-            'doshas' => 'required|array|min:1',
-            'doshas.*' => 'required|in:Vata,Pitta,Kapha',
-            'registration_date' => 'required|date',
-            'registration_type' => 'required|in:OPD,IPD',
-            'photo' => 'nullable|image|max:2048',
-        ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'full_name' => 'required|string|max:255',
+                'gender' => 'required|in:male,female,other',
+                'age' => 'required|integer|min:0|max:150',
+                'mobile' => 'required|digits:10',
+                'emergency_contact' => 'required|digits:10',
+                'aadhaar_number' => 'required|digits:12',
+                'address' => 'required|string',
+                'allergies' => 'required|string|max:255',
+                'prakriti' => 'required|string|in:Vata,Pitta,Kapha,Vata-Pitta,Pitta-Kapha,Vata-Kapha,Vata-Pitta-Kapha',
+                'doshas' => 'required|array|min:1',
+                'doshas.*' => 'required|in:Vata,Pitta,Kapha',
+                'registration_date' => 'required|date',
+                'registration_type' => 'required|in:OPD,IPD',
+                'photo' => 'nullable|image|max:2048',
+            ]
+        );
+
+        // If validation fails, redirect back with errors
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $validated = $validator->validated();
 
         $updateData = [
             'full_name' => $validated['full_name'],
@@ -258,25 +206,33 @@ class PatientController extends Controller
 
         $patient->update($updateData);
 
-        return redirect()->route('patients')->with('status', 'Patient updated successfully.');
+        // Save the user
+        if ($patient->save()) {
+            LogHelper::logActivity('Update', $patient->id, 'patient', $patient->toArray());  // For Insert 
+
+            return redirect()->route('patients')->with('success', 'Patient updated successfully');
+        } else {
+            return redirect()->route('patients')->with('error', "Something Wrong On Data Save");
+        }
     }
 
     //  delete the specified patient.
-    public function destroy($id)
+    public function destroy(Patient $patient)
     {
-        $patients = Patient::findOrFail($id);
-
         // Delete photo if exists
-        if ($patients->photo_path && File::exists(public_path($patients->photo_path))) {
-            File::delete(public_path($patients->photo_path));
+        if ($patient->photo_path && File::exists(public_path($patient->photo_path))) {
+            File::delete(public_path($patient->photo_path));
         }
 
         // delete user from database
-        if ($patients->delete()) {
+        if ($patient->delete()) {
+            LogHelper::logActivity('Delete', $patient->id, 'patient', $patient->toArray());  // For delete 
+
             return redirect()->route('patients')->with('success', 'Patient deleted Successfully');
         }
         return redirect()->route('patients')->with('error', 'Failed to delete patient');
     }
+
 
     // Generate a new UHID code.
     protected function generateUhid(): string
@@ -290,5 +246,40 @@ class PatientController extends Controller
         }
 
         return sprintf('AYR-%d-%04d', $year, $sequence);
+    }
+
+    /**
+     * Get statistics for the patient dashboard.
+     *
+     * @return array
+     */
+    private function getDashboardStats(): array
+    {
+        $todayRegistrations = Patient::whereDate('registration_date', today())->count();
+        $yesterdayRegistrations = Patient::whereDate('registration_date', today()->subDay())->count();
+
+        $todayTrendType = 'flat';
+        if ($todayRegistrations > $yesterdayRegistrations) {
+            $todayTrendType = 'up';
+        } elseif ($todayRegistrations < $yesterdayRegistrations) {
+            $todayTrendType = 'down';
+        }
+
+        $todayTrendText = $yesterdayRegistrations > 0
+            ? (abs(round((($todayRegistrations - $yesterdayRegistrations) / $yesterdayRegistrations) * 100, 1)) . '% vs yesterday')
+            : ($todayRegistrations > 0 ? 'New activity' : 'No change');
+
+        return [
+            'todayRegistrations' => $todayRegistrations,
+            'todayRegistrationsTrend' => [
+                'type' => $todayTrendType,
+                'text' => $todayTrendText,
+            ],
+            'activeOpdCount' => Patient::where('registration_type', 'OPD')->count(),
+            'activeOpdTrend' => ['type' => 'flat', 'text' => 'Stable'], // Placeholder
+            'activeIpdCount' => Patient::where('registration_type', 'IPD')->count(),
+            'activeIpdTrend' => ['type' => 'flat', 'text' => 'Stable'], // Placeholder
+            'panchkarmaTreatments' => 15, // Placeholder
+        ];
     }
 }

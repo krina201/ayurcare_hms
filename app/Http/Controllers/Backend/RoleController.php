@@ -24,7 +24,16 @@ class RoleController extends Controller
     {
         $pagename = 'Role';
         $breadcrumb = 'Role List';
-        $role = Role::with('permissions')->get();
+        $query = Role::with('permissions');
+        if ($q = request('q')) {
+            $query->where('name', 'like', "%{$q}%");
+        }
+
+        $perPage = (int) request('per_page', 10);
+        if ($perPage < 1) $perPage = 10;
+        if ($perPage > 100) $perPage = 100;
+
+        $role = $query->paginate($perPage)->withQueryString();
 
         // Load permissions grouped for the view (same grouping used in create/edit)
         $permission = Permission::orderBy('name', 'asc')->get()->groupBy(function ($permission) {
@@ -93,7 +102,14 @@ class RoleController extends Controller
 
         // Use index view with inline form for edit mode (same design as User module)
         $editRole = $role;
-        $roles = Role::with('permissions')->get();
+        $query = Role::with('permissions');
+        if ($q = request('q')) {
+            $query->where('name', 'like', "%{$q}%");
+        }
+        $perPage = (int) request('per_page', 10);
+        if ($perPage < 1) $perPage = 10;
+        if ($perPage > 100) $perPage = 100;
+        $roles = $query->paginate($perPage)->withQueryString();
         return view('backend.role.index', compact('pagename', 'breadcrumb', 'editRole', 'permission', 'hasepermission'))->with('role', $roles);
     }
 
@@ -130,10 +146,9 @@ class RoleController extends Controller
     public function destroy($id)
     {
         $role = Role::with('permissions')->findOrFail($id);
-
-        // delete user from database
         if ($role->delete()) {
-            return redirect()->route('role')->with('success', 'Permission deleted Successfully');
+            return response()->json(['success' => true, 'message' => 'Role deleted successfully.']);
         }
+        return response()->json(['success' => false, 'message' => 'Failed to delete role.'], 500);
     }
 }

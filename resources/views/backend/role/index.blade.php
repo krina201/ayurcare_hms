@@ -101,8 +101,55 @@
             <div class="flex items-center justify-between mb-4">
                 <h4 class="text-lg font-medium text-stone-800">Role List</h4>
             </div>
+            @if (
+                $role instanceof \Illuminate\Contracts\Pagination\Paginator ||
+                    $role instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <div class="flex justify-between items-center mb-4" id="searchResults">
+                    <h3 class="text-lg font-semibold text-stone-800">Search Results <span
+                            class="text-green-600 text-sm font-normal">({{ $role->total() }} roles
+                            found)</span></h3>
+
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-stone-600">Show:</span>
+                        <form method="GET" action="{{ route('role') }}">
+                            @foreach (request()->except(['per_page']) as $k => $v)
+                                @if (is_array($v))
+                                    @foreach ($v as $vv)
+                                        <input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                                @endif
+                            @endforeach
+                            <select name="per_page" onchange="this.form.submit()"
+                                class="text-sm rounded-md border-stone-300 px-2 py-1">
+                                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                                <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
+                                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
+                                <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
+                            </select>
+                        </form>
+
+                        <form method="GET" action="{{ route('role') }}">
+                            @foreach (request()->except(['q']) as $k => $v)
+                                @if (is_array($v))
+                                    @foreach ($v as $vv)
+                                        <input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                                @endif
+                            @endforeach
+                            <input type="search" name="q" value="{{ request('q') }}" placeholder="Search roles..."
+                                class="border rounded px-2 py-1 text-sm">
+                        </form>
+                    </div>
+                </div>
+            @else
+                <div class="mb-4">&nbsp;</div>
+            @endif
             <div class="overflow-x-auto">
-                <table class="min-w-full table-auto text-left" id="roleTable">
+                <table class="min-w-full divide-y divide-gray-200" id="roleTable">
                     <thead class="bg-stone-50 text-stone-700">
                         <tr>
                             <th class="px-4 py-3 font-medium">Name</th>
@@ -112,8 +159,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if ($role->isNotEmpty())
-                            @foreach ($role as $roles)
+                        @if (!empty($role) && ($role->count() || (method_exists($role, 'items') && count($role->items()))))
+                            @foreach ($role->items() ?? $role as $roles)
                                 <tr class="border-t">
                                     <td class="px-4 py-2 text-stone-700">{{ $roles->name }}</td>
                                     <td class="px-4 py-2 text-stone-700">
@@ -161,6 +208,20 @@
                     </tbody>
                 </table>
             </div>
+            @if (
+                $role instanceof \Illuminate\Contracts\Pagination\Paginator ||
+                    $role instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <div class="flex items-center justify-between mt-4">
+                    <div class="text-sm text-stone-600">
+                        Showing <span class="font-medium">{{ $role->firstItem() }}</span> to <span
+                            class="font-medium">{{ $role->lastItem() }}</span> of <span
+                            class="font-medium">{{ $role->total() }}</span> results
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div>{{ $role->appends(request()->query())->links() }}</div>
+                    </div>
+                </div>
+            @endif
         </div>
     </main>
 @endsection

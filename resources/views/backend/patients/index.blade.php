@@ -733,16 +733,6 @@
                                         {{-- @endpermission --}}
 
                                         {{-- delete button --}}
-                                        {{-- @permission('patients.delete') --}}
-                                        {{-- <form
-                                            action="{{ route('patients.destroy', ['patient' => $patient->getRouteKey()]) }}"
-                                            method="POST" class="inline"
-                                            onsubmit="return confirm('Delete this patient?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-900"
-                                                title="Delete"><i class="fa-solid fa-trash"></i></button>
-                                        </form> --}}
 
                                         <button type="button" class="delete-patient-btn text-red-600 hover:text-red-900"
                                             data-id="{{ $patient->id }}" title="Delete"><i
