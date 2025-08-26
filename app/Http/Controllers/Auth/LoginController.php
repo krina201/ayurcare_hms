@@ -51,13 +51,15 @@ class LoginController extends Controller
         // $user->save();
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        Session::flush();
         Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-        return Redirect('/');
+        return redirect('/'); // or wherever you want
     }
+
 
     // Update this method
     public function showLoginForm()

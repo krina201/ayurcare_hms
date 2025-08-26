@@ -24,23 +24,13 @@ class RoleController extends Controller
     {
         $pagename = 'Role';
         $breadcrumb = 'Role List';
-        $query = Role::with('permissions');
-        if ($q = request('q')) {
-            $query->where('name', 'like', "%{$q}%");
-        }
-
-        $perPage = (int) request('per_page', 10);
-        if ($perPage < 1) $perPage = 10;
-        if ($perPage > 100) $perPage = 100;
-
-        $role = $query->paginate($perPage)->withQueryString();
 
         // Load permissions grouped for the view (same grouping used in create/edit)
         $permission = Permission::orderBy('name', 'asc')->get()->groupBy(function ($permission) {
             $lastPart = explode('-', $permission->name);
             return ucfirst(end($lastPart));
         });
-
+        $role = Role::all();
         return view('backend.role.index', compact('pagename', 'breadcrumb', 'role', 'permission'));
     }
 
@@ -102,14 +92,8 @@ class RoleController extends Controller
 
         // Use index view with inline form for edit mode (same design as User module)
         $editRole = $role;
-        $query = Role::with('permissions');
-        if ($q = request('q')) {
-            $query->where('name', 'like', "%{$q}%");
-        }
-        $perPage = (int) request('per_page', 10);
-        if ($perPage < 1) $perPage = 10;
-        if ($perPage > 100) $perPage = 100;
-        $roles = $query->paginate($perPage)->withQueryString();
+
+        $roles = Role::all();
         return view('backend.role.index', compact('pagename', 'breadcrumb', 'editRole', 'permission', 'hasepermission'))->with('role', $roles);
     }
 

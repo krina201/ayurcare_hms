@@ -24,28 +24,38 @@ class UserController extends Controller
     // }
 
     // listing user datastore
-    public function index()
+    public function index(Request $request)
     {
         $pagename = 'User';
         $breadcrumb = 'User List';
-        $query = User::query();
 
-        // simple search across name and email using 'q' param
-        if ($q = request('q')) {
-            $query->where(function ($w) use ($q) {
-                $w->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
-            });
-        }
-
-        $perPage = (int) request('per_page', 10);
-        if ($perPage < 1) $perPage = 10;
-        if ($perPage > 100) $perPage = 100;
-
-        $user = $query->paginate($perPage)->withQueryString();
+        $user = User::all();
         $role = Role::all();
+
         return view('backend.user.index', compact('pagename', 'breadcrumb', 'user', 'role'));
     }
 
+    // public function index()
+    // {
+    //     $pagename = 'User';
+    //     $breadcrumb = 'User List';
+    //     $query = User::query();
+
+    //     // simple search across name and email using 'q' param
+    //     if ($q = request('q')) {
+    //         $query->where(function ($w) use ($q) {
+    //             $w->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
+    //         });
+    //     }
+
+    //     $perPage = (int) request('per_page', 10);
+    //     if ($perPage < 1) $perPage = 10;
+    //     if ($perPage > 100) $perPage = 100;
+
+    //     $user = $query->paginate($perPage)->withQueryString();
+    //     $role = Role::all();
+    //     return view('backend.user.index', compact('pagename', 'breadcrumb', 'user', 'role'));
+    // }
 
 
     // view user form
@@ -128,6 +138,7 @@ class UserController extends Controller
     {
         $pagename = 'User';
         $breadcrumb = 'User Edit';
+
         $user = User::findOrFail($id);
         // $role = Role::where('id', '!=', 1)->get();
         $role = Role::all();
@@ -135,17 +146,8 @@ class UserController extends Controller
         // dd($hasRoles);
         // Use the index view with inline form for edit mode
         $editUser = $user;
-        // Also provide the users list so the table renders alongside the edit form (paginated)
-        $query = User::query();
-        if ($q = request('q')) {
-            $query->where(function ($w) use ($q) {
-                $w->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
-            });
-        }
-        $perPage = (int) request('per_page', 10);
-        if ($perPage < 1) $perPage = 10;
-        if ($perPage > 100) $perPage = 100;
-        $users = $query->paginate($perPage)->withQueryString();
+
+        $users = User::all();
 
         // The view expects a variable named $user for the collection, so attach it while keeping $editUser for the single record
         return view('backend.user.index', compact('pagename', 'breadcrumb', 'editUser', 'role', 'hasRoles'))->with('user', $users);

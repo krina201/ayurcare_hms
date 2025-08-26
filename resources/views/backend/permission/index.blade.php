@@ -64,77 +64,50 @@
             <div class="flex items-center justify-between mb-4">
                 <h4 class="text-lg font-medium text-stone-800">Permission List</h4>
             </div>
-            @if (
-                $permission instanceof \Illuminate\Contracts\Pagination\Paginator ||
-                    $permission instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                <div class="flex justify-between items-center mb-4" id="searchResults">
-                    <h3 class="text-lg font-semibold text-stone-800">Search Results <span
-                            class="text-green-600 text-sm font-normal">({{ $permission->total() }} permissions
-                            found)</span></h3>
 
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-stone-600">Show:</span>
-                        <form method="GET" action="{{ route('permission') }}">
-                            @foreach (request()->except(['per_page']) as $k => $v)
-                                @if (is_array($v))
-                                    @foreach ($v as $vv)
-                                        <input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">
-                                    @endforeach
-                                @else
-                                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                                @endif
-                            @endforeach
-                            <select name="per_page" onchange="this.form.submit()"
-                                class="text-sm rounded-md border-stone-300 px-2 py-1">
-                                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
-                                <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
-                                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
-                                <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
-                            </select>
-                        </form>
-
-                        <form method="GET" action="{{ route('permission') }}">
-                            @foreach (request()->except(['q']) as $k => $v)
-                                @if (is_array($v))
-                                    @foreach ($v as $vv)
-                                        <input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">
-                                    @endforeach
-                                @else
-                                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                                @endif
-                            @endforeach
-                            <input type="search" name="q" value="{{ request('q') }}"
-                                placeholder="Search permissions..." class="border rounded px-2 py-1 text-sm">
-                        </form>
-                    </div>
-                </div>
-            @else
-                <div class="mb-4">&nbsp;</div>
-            @endif
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200" id="PermissionTable">
-                    <thead class="bg-stone-50 text-stone-700">
+                <table class="min-w-full divide-y divide-gray-200" id="example">
+                    <thead class="bg-ayur-offwhite">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Name</th>
-                            <th class="px-4 py-3 font-medium">Created</th>
-                            <th class="px-4 py-3 font-medium">Action</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                <div class="flex items-center cursor-pointer">
+                                    Name
+                                </div>
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                <div class="flex items-center cursor-pointer">
+                                    Created
+                                </div>
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-gray-200">
                         @forelse ($permission->items() ?? $permission as $permissiones)
-                            <tr class="border-t">
-                                <td class="px-4 py-2 text-stone-700">{{ $permissiones->name }}</td>
-                                <td class="px-4 py-2 text-stone-700">{{ $permissiones->created_at->format('d-m-Y') }}</td>
-                                <td class="px-4 py-2">
-                                    {{-- edit butten --}}
+                            <tr class="hover:bg-ayur-offwhite">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-800">
+                                    {{ $permissiones->name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">
+                                    {{ $permissiones->created_at->format('d-m-Y') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    {{-- edit button --}}
                                     <a href="{{ route('permission.edit', $permissiones->id) }}"
-                                        class="text-stone-700 hover:text-stone-900 mr-3" title="Edit"><i
-                                            class="fa-solid fa-pen-to-square"></i></a>
+                                        class="text-stone-600 hover:text-stone-900 mr-2" title="Edit">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
 
-                                    {{-- delet butten --}}
+                                    {{-- delete button --}}
                                     <button type="button" class="delete-permission-btn text-red-600 hover:text-red-900"
-                                        data-id="{{ $permissiones->id }}" title="Delete"><i
-                                            class="fa-solid fa-trash"></i></button>
+                                        data-id="{{ $permissiones->id }}" title="Delete">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
                                     <form id="delete-permission-form-{{ $permissiones->id }}"
                                         action="{{ route('permission.delete', $permissiones->id) }}" method="post"
                                         style="display:none;">
@@ -145,26 +118,16 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="px-4 py-4 text-center text-stone-600">No permissions found.</td>
+                                <td colspan="3" class="px-6 py-4 text-center text-stone-600">
+                                    No permissions found.
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            @if (
-                $permission instanceof \Illuminate\Contracts\Pagination\Paginator ||
-                    $permission instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                <div class="flex items-center justify-between mt-4">
-                    <div class="text-sm text-stone-600">
-                        Showing <span class="font-medium">{{ $permission->firstItem() }}</span> to <span
-                            class="font-medium">{{ $permission->lastItem() }}</span> of <span
-                            class="font-medium">{{ $permission->total() }}</span> results
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div>{{ $permission->appends(request()->query())->links() }}</div>
-                    </div>
-                </div>
-            @endif
+
+
         </div>
     </main>
 @endsection

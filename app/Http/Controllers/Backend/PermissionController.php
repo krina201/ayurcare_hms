@@ -24,14 +24,7 @@ class PermissionController extends Controller
     {
         $pagename = 'Permission';
         $breadcrumb = 'Permission List';
-        $query = Permission::query();
-        if ($q = request('q')) {
-            $query->where('name', 'like', "%{$q}%");
-        }
-        $perPage = (int) request('per_page', 10);
-        if ($perPage < 1) $perPage = 10;
-        if ($perPage > 100) $perPage = 100;
-        $permission = $query->paginate($perPage)->withQueryString();
+        $permission = Permission::all();
         return view('backend.permission.index', compact('pagename', 'breadcrumb', 'permission'));
     }
 
@@ -87,14 +80,7 @@ class PermissionController extends Controller
 
         // Use index view with inline form for edit mode (same design as User module)
         $editPermission = $permission;
-        $query = Permission::query();
-        if ($q = request('q')) {
-            $query->where('name', 'like', "%{$q}%");
-        }
-        $perPage = (int) request('per_page', 10);
-        if ($perPage < 1) $perPage = 10;
-        if ($perPage > 100) $perPage = 100;
-        $permissions = $query->paginate($perPage)->withQueryString();
+        $permissions = Permission::all();
         return view('backend.permission.index', compact('pagename', 'breadcrumb', 'editPermission'))->with('permission', $permissions);
     }
 

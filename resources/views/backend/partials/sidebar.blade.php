@@ -148,6 +148,13 @@
                 </li>
             @endcan
 
+            <li id="nav-logout" class="list-group-item border-0 bg-transparent">
+                <a href="{{ route('logout') }}"
+                    class="d-flex align-items-center p-3 rounded text-dark hover-gradient-gray {{ request()->routeIs('logout*') ? 'active' : 'collapsed' }}">
+                    <i class="fa-solid fa-right-from-bracket" style="color: #6B7280"></i>
+                    <span class="ms-3 sidebar-label">{{ __('logout') }}</span>
+                </a>
+            </li>
         </ul>
     </div>
 </div>

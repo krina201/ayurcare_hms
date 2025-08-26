@@ -65,6 +65,12 @@
                                 placeholder="Enter name">
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-ayur-brown-700 mb-1">Patient Email</label>
+                            <input type="text" name="email" value="{{ request('email') }}"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
+                                placeholder="Enter Email">
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-ayur-brown-700 mb-1">Phone Number</label>
                             <input type="tel" name="mobile" value="{{ request('mobile') }}"
                                 class="block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
@@ -108,134 +114,135 @@
             </div>
 
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                @if (isset($searchResults))
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-ayur-brown-800">Search Results <span
-                                class="text-ayur-green-600 text-sm font-normal">({{ $searchResults->total() }} patients
-                                found)</span></h3>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm text-ayur-brown-600">Show:</span>
-                            <form method="GET" action="{{ route('patients') }}">
-                                @foreach (request()->except(['per_page']) as $k => $v)
-                                    @if (is_array($v))
-                                        @foreach ($v as $vv)
-                                            <input type="hidden" name="{{ $k }}[]"
-                                                value="{{ $vv }}">
-                                        @endforeach
-                                    @else
-                                        <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                                    @endif
-                                @endforeach
-                                <select name="per_page"
-                                    class="text-sm rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50"
-                                    onchange="this.form.submit()">
-                                    <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10</option>
-                                    <option value="25" {{ request('per_page', 25) == 25 ? 'selected' : '' }}>25
-                                    </option>
-                                    <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
-                                    <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
-                                </select>
-                            </form>
-                        </div>
-                    </div>
-                @endif
 
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-lg font-medium text-stone-800">Search Results </h4>
+                </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200" id="patientTable">
+                    <table class="min-w-full divide-y divide-gray-200 example">
                         <thead class="bg-ayur-offwhite">
                             <tr>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    <div class="flex items-center cursor-pointer">UHID <i
-                                            class="fa-solid fa-sort ml-1"></i></div>
+                                    <div class="flex items-center cursor-pointer">
+                                        UHID
+                                    </div>
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    <div class="flex items-center cursor-pointer">Patient Name <i
-                                            class="fa-solid fa-sort ml-1"></i></div>
+                                    <div class="flex items-center cursor-pointer">
+                                        Patient Name
+                                    </div>
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    <div class="flex items-center cursor-pointer">Age/Gender <i
-                                            class="fa-solid fa-sort ml-1"></i></div>
+                                    <div class="flex items-center cursor-pointer">
+                                        Email
+                                    </div>
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    <div class="flex items-center cursor-pointer">Type <i
-                                            class="fa-solid fa-sort ml-1"></i></div>
+                                    <div class="flex items-center cursor-pointer">
+                                        Age / Gender
+                                    </div>
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    <div class="flex items-center cursor-pointer">Mobile <i
-                                            class="fa-solid fa-sort ml-1"></i></div>
+                                    <div class="flex items-center cursor-pointer">
+                                        Type
+                                    </div>
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    <div class="flex items-center cursor-pointer">Last Visit <i
-                                            class="fa-solid fa-sort ml-1"></i></div>
+                                    <div class="flex items-center cursor-pointer">
+                                        Mobile
+                                    </div>
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    <div class="flex items-center cursor-pointer">Prakriti <i
-                                            class="fa-solid fa-sort ml-1"></i></div>
+                                    <div class="flex items-center cursor-pointer">
+                                        Last Visit
+                                    </div>
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                    Actions</th>
+                                    <div class="flex items-center cursor-pointer">
+                                        Prakriti
+                                    </div>
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse(($searchResults ?? collect()) as $p)
                                 <tr class="hover:bg-ayur-offwhite">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">
-                                        {{ $p->uhid }}</td>
+                                        {{ $p->uhid }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-8 w-8">
-                                                @if ($p->photo_path)
-                                                    <img class="h-8 w-8 rounded-full" src="{{ asset($p->photo_path) }}"
-                                                        alt="">
-                                                @else
-                                                    <img class="h-8 w-8 rounded-full"
-                                                        src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                                        alt="">
-                                                @endif
+                                                <img class="h-8 w-8 rounded-full"
+                                                    src="{{ $p->photo_path ? asset($p->photo_path) : asset('backend-assets/media/uploads/download (3).png') }}"
+                                                    onerror="this.onerror=null; this.src='{{ asset('backend-assets/media/uploads/download (3).png') }}';"
+                                                    alt="Patient Photo">
+
+                                                {{-- <img class="h-8 w-8 rounded-full"
+                                                    src="{{ $p->photo_path ? asset($p->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg' }}"
+                                                    alt="Patient Photo"> --}}
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-ayur-brown-800">{{ $p->full_name }}
+                                                <div class="text-sm font-medium text-ayur-brown-800">
+                                                    {{ $p->full_name }}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
-                                        {{ $p->age }}/{{ strtoupper(substr($p->gender, 0, 1)) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span
-                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $p->registration_type === 'OPD' ? 'bg-ayur-green-100 text-ayur-green-800' : 'bg-ayur-yellow-100 text-ayur-yellow-800' }}">{{ $p->registration_type }}</span>
+                                        {{ $p->email }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
-                                        {{ $p->mobile }}</td>
+                                        {{ $p->age }}/{{ strtoupper(substr($p->gender, 0, 1)) }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $p->registration_type === 'OPD' ? 'bg-ayur-green-100 text-ayur-green-800' : 'bg-ayur-yellow-100 text-ayur-yellow-800' }}">
+                                            {{ $p->registration_type }}
+                                        </span>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
-                                        {{ optional($p->registration_date)->format('d M Y') }}</td>
+                                        {{ $p->mobile }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
-                                        {{ $p->prakriti }}</td>
+                                        {{ optional($p->registration_date)->format('d M Y') }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                        {{ $p->prakriti }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <a href="{{ route('patients.edit', ['patient' => $p->getRouteKey()]) }}"
-                                            class="text-ayur-brown-700 hover:text-ayur-brown-900 mr-3" title="Edit"><i
-                                                class="fa-solid fa-pen-to-square"></i></a>
+                                            class="text-stone-600 hover:text-stone-900 mr-2" title="Edit">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
+                                        {{-- you can add delete/view here if needed --}}
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-6 py-4 text-center text-ayur-brown-600 text-sm">No
-                                        patients found.</td>
+                                    <td colspan="9" class="px-6 py-4 text-center text-sm text-ayur-brown-600">
+                                        No patients found.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                @if (isset($searchResults))
+
+                {{-- @if (isset($searchResults))
                     <div class="flex items-center justify-between mt-4">
                         <div class="text-sm text-ayur-brown-600">
                             Showing <span class="font-medium">{{ $searchResults->firstItem() }}</span> to <span
@@ -246,7 +253,7 @@
                             <div>{{ $searchResults->appends(request()->query())->links() }}</div>
                         </div>
                     </div>
-                @endif
+                @endif --}}
             </div>
             <div class="bg-white rounded-lg shadow-md p-6">
                 <div class="flex justify-between items-center mb-4">
@@ -350,6 +357,18 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring focus:ring-green-200 focus:ring-opacity-50 p-2 border @error('full_name') border-red-500 @enderror"
                                 placeholder="Enter patient name">
                             @error('full_name')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-stone-700">Email <span
+                                    class="text-red-500">*</span></label>
+                            <input type="text" name="email" id="email" required
+                                value="{{ old('email', $patient->email ?? '') }}"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring focus:ring-green-200 focus:ring-opacity-50 p-2 border @error('email') border-red-500 @enderror"
+                                placeholder="Enter patient Email">
+                            @error('email')
                                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
@@ -662,99 +681,123 @@
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-semibold text-stone-800">Recent Registrations</h3>
                 </div>
+
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-[#f8f5f0]">
+                    <table class="min-w-full divide-y divide-gray-200 example">
+                        <thead class="bg-ayur-offwhite">
                             <tr>
-                                <th
+                                <th scope="col"
                                     class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
-                                    UHID</th>
-                                <th
+                                    UHID
+                                </th>
+                                <th scope="col"
                                     class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
-                                    Patient Name</th>
-                                <th
+                                    Patient Name
+                                </th>
+                                <th scope="col"
                                     class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
-                                    Age/Gender</th>
-                                <th
+                                    Email
+                                </th>
+                                <th scope="col"
                                     class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
-                                    Registration</th>
-                                <th
+                                    Age / Gender
+                                </th>
+                                <th scope="col"
                                     class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
-                                    Mobile</th>
-                                <th
+                                    Registration
+                                </th>
+                                <th scope="col"
                                     class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
-                                    Prakriti</th>
-                                <th
+                                    Mobile
+                                </th>
+                                <th scope="col"
                                     class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
-                                    Actions</th>
+                                    Prakriti
+                                </th>
+                                <th scope="col"
+                                    class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse($patients as $patient)
-                                <tr>
+                                <tr class="hover:bg-ayur-offwhite">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-800">
-                                        {{ $patient->uhid }}</td>
+                                        {{ $patient->uhid }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-8 w-8">
                                                 <img class="h-8 w-8 rounded-full"
                                                     src="{{ $patient->photo_path ? asset($patient->photo_path) : asset('backend-assets/media/uploads/download (3).png') }}"
                                                     onerror="this.onerror=null; this.src='{{ asset('backend-assets/media/uploads/download (3).png') }}';"
-                                                    alt="">
-
+                                                    alt="Patient Photo">
                                             </div>
                                             <div class="ml-4">
                                                 <div class="text-sm font-medium text-stone-800">
-                                                    {{ $patient->full_name }}</div>
+                                                    {{ $patient->full_name }}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">
-                                        {{ $patient->age }}/{{ strtoupper(substr($patient->gender, 0, 1)) }}</td>
+                                        {{ $patient->email }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">
+                                        {{ $patient->age }}/{{ strtoupper(substr($patient->gender, 0, 1)) }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         @php $type = $patient->registration_type; @endphp
                                         <span
-                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $type === 'OPD' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">{{ $type }}</span>
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $type === 'OPD' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                            {{ $type }}
+                                        </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">
-                                        {{ $patient->mobile }}</td>
+                                        {{ $patient->mobile }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">
-                                        {{ $patient->prakriti }}</td>
+                                        {{ $patient->prakriti }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         {{-- view button --}}
-                                        <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"><i
-                                                class="fa-solid fa-eye"></i></button>
+                                        <a href="{{ route('patients.show', ['patient' => $patient->getRouteKey()]) }}"
+                                            class="text-ayur-green-600 hover:text-ayur-green-900 mr-2"
+                                            title="View Patient Profile">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
 
                                         {{-- edit button --}}
-                                        {{-- @permission('patients.edit') --}}
                                         <a href="{{ route('patients.edit', ['patient' => $patient->getRouteKey()]) }}"
-                                            class="text-stone-700 hover:text-stone-900 mr-3" title="Edit"><i
-                                                class="fa-solid fa-pen-to-square"></i></a>
-                                        {{-- @endpermission --}}
+                                            class="text-stone-600 hover:text-stone-900 mr-2" title="Edit">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
 
                                         {{-- delete button --}}
-
                                         <button type="button" class="delete-patient-btn text-red-600 hover:text-red-900"
-                                            data-id="{{ $patient->id }}" title="Delete"><i
-                                                class="fa-solid fa-trash"></i></button>
+                                            data-id="{{ $patient->id }}" title="Delete">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
                                         <form id="delete-patient-form-{{ $patient->id }}"
                                             action="{{ route('patients.delete', $patient->id) }}" method="post"
                                             style="display:none;">
                                             @csrf
                                             @method('delete')
                                         </form>
-                                        {{-- @endpermission --}}
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-6 py-4 text-center text-sm text-stone-600">No
-                                        patients yet.</td>
+                                    <td colspan="8" class="px-6 py-4 text-center text-sm text-stone-600">
+                                        No patients found.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+
             </div>
         </div>
     </main>
@@ -857,6 +900,20 @@
                 valid = false;
             } else {
                 clearError(fullName);
+            }
+
+            // email
+            const email = fields.email && fields.email.value.trim();
+            clearError('email');
+            if (!email) {
+                showError('email', 'Email field is required.');
+                valid = false;
+            } else if (!validateEmail(email)) {
+                showError('email', 'Please provide a valid Email address.');
+                valid = false;
+            } else if (email.length > 255) {
+                showError('email', 'Email may not be greater than 255 characters.');
+                valid = false;
             }
 
             const genderChecked = !!form.querySelector('input[name="gender"]:checked');
@@ -976,6 +1033,7 @@
 
         // Real-time clearing
         document.getElementById('full_name').addEventListener('input', e => clearError(e.target));
+        document.getElementById('email').addEventListener('input', e => clearError(e.target));
         document.getElementById('age').addEventListener('input', e => clearError(e.target));
         document.getElementById('mobile').addEventListener('input', e => clearError(e.target));
         document.getElementById('emergency_contact').addEventListener('input', e => clearError(e.target));

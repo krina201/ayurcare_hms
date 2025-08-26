@@ -101,127 +101,92 @@
             <div class="flex items-center justify-between mb-4">
                 <h4 class="text-lg font-medium text-stone-800">Role List</h4>
             </div>
-            @if (
-                $role instanceof \Illuminate\Contracts\Pagination\Paginator ||
-                    $role instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                <div class="flex justify-between items-center mb-4" id="searchResults">
-                    <h3 class="text-lg font-semibold text-stone-800">Search Results <span
-                            class="text-green-600 text-sm font-normal">({{ $role->total() }} roles
-                            found)</span></h3>
 
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-stone-600">Show:</span>
-                        <form method="GET" action="{{ route('role') }}">
-                            @foreach (request()->except(['per_page']) as $k => $v)
-                                @if (is_array($v))
-                                    @foreach ($v as $vv)
-                                        <input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">
-                                    @endforeach
-                                @else
-                                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                                @endif
-                            @endforeach
-                            <select name="per_page" onchange="this.form.submit()"
-                                class="text-sm rounded-md border-stone-300 px-2 py-1">
-                                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
-                                <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
-                                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
-                                <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
-                            </select>
-                        </form>
-
-                        <form method="GET" action="{{ route('role') }}">
-                            @foreach (request()->except(['q']) as $k => $v)
-                                @if (is_array($v))
-                                    @foreach ($v as $vv)
-                                        <input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">
-                                    @endforeach
-                                @else
-                                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                                @endif
-                            @endforeach
-                            <input type="search" name="q" value="{{ request('q') }}" placeholder="Search roles..."
-                                class="border rounded px-2 py-1 text-sm">
-                        </form>
-                    </div>
-                </div>
-            @else
-                <div class="mb-4">&nbsp;</div>
-            @endif
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200" id="roleTable">
-                    <thead class="bg-stone-50 text-stone-700">
+                <table class="min-w-full divide-y divide-gray-200" id="example">
+                    <thead class="bg-ayur-offwhite">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Name</th>
-                            <th class="px-4 py-3 font-medium">Permissions</th>
-                            <th class="px-4 py-3 font-medium">Created</th>
-                            <th class="px-4 py-3 font-medium">Action</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                <div class="flex items-center cursor-pointer">
+                                    Name
+                                </div>
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                <div class="flex items-center cursor-pointer">
+                                    Permissions
+                                </div>
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                <div class="flex items-center cursor-pointer">
+                                    Created
+                                </div>
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-stone-600 uppercase tracking-wider">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @if (!empty($role) && ($role->count() || (method_exists($role, 'items') && count($role->items()))))
-                            @foreach ($role->items() ?? $role as $roles)
-                                <tr class="border-t">
-                                    <td class="px-4 py-2 text-stone-700">{{ $roles->name }}</td>
-                                    <td class="px-4 py-2 text-stone-700">
-                                        @if ($roles->permissions->isNotEmpty())
-                                            @php $counter = 0; @endphp
-                                            @foreach ($roles->permissions as $permissiones)
-                                                {{ $permissiones->name }}
-                                                @php $counter++; @endphp
-                                                @if ($counter % 10 == 0 && !$loop->last)
-                                                    <br>
-                                                @else
-                                                    {{ !$loop->last ? ', ' : '' }}
-                                                @endif
-                                            @endforeach
-                                        @else
-                                            No Permissions Assigned
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-2">{{ $roles->created_at->format('d-m-Y') }}</td>
-                                    <td class="px-4 py-2">
-                                        {{-- edit button --}}
-                                        {{-- @can('edit-roles') --}}
-                                        <a class='text-stone-700 hover:text-stone-900 mr-3'
-                                            href='{{ route('role.edit', $roles->id) }}' title="Edit">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </a>
-                                        {{-- @endcan --}}
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse ($role->items() ?? $role as $roles)
+                            <tr class="hover:bg-ayur-offwhite">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-800">
+                                    {{ $roles->name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">
+                                    @if ($roles->permissions->isNotEmpty())
+                                        @php $counter = 0; @endphp
+                                        @foreach ($roles->permissions as $permissiones)
+                                            {{ $permissiones->name }}
+                                            @php $counter++; @endphp
+                                            @if ($counter % 10 == 0 && !$loop->last)
+                                                <br>
+                                            @else
+                                                {{ !$loop->last ? ', ' : '' }}
+                                            @endif
+                                        @endforeach
+                                    @else
+                                        <span class="text-stone-500 italic">No Permissions Assigned</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-700">
+                                    {{ $roles->created_at->format('d-m-Y') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    {{-- edit button --}}
+                                    <a href="{{ route('role.edit', $roles->id) }}"
+                                        class="text-stone-600 hover:text-stone-900 mr-2" title="Edit">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
 
-                                        {{-- delete button --}}
-                                        {{-- @can('delete-roles') --}}
-                                        <button type="button" class="delete-role-btn text-red-600 hover:text-red-900"
-                                            data-id="{{ $roles->id }}" title="Delete"><i
-                                                class="fa-solid fa-trash"></i></button>
-                                        <form id="delete-role-form-{{ $roles->id }}"
-                                            action="{{ route('role.delete', $roles->id) }}" method="post"
-                                            style="display:none;">
-                                            @csrf
-                                            @method('delete')
-                                        </form>
-                                        {{-- @endcan --}}
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @endif
+                                    {{-- delete button --}}
+                                    <button type="button" class="delete-role-btn text-red-600 hover:text-red-900"
+                                        data-id="{{ $roles->id }}" title="Delete">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                    <form id="delete-role-form-{{ $roles->id }}"
+                                        action="{{ route('role.delete', $roles->id) }}" method="post"
+                                        style="display:none;">
+                                        @csrf
+                                        @method('delete')
+                                    </form>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="px-6 py-4 text-center text-stone-600">
+                                    No roles found.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
-            @if (
-                $role instanceof \Illuminate\Contracts\Pagination\Paginator ||
-                    $role instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                <div class="flex items-center justify-between mt-4">
-                    <div class="text-sm text-stone-600">
-                        Showing <span class="font-medium">{{ $role->firstItem() }}</span> to <span
-                            class="font-medium">{{ $role->lastItem() }}</span> of <span
-                            class="font-medium">{{ $role->total() }}</span> results
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div>{{ $role->appends(request()->query())->links() }}</div>
-                    </div>
-                </div>
-            @endif
+
+
         </div>
     </main>
 @endsection

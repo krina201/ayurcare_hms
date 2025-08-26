@@ -1,35 +1,13 @@
-/* Hide scrollbars */
-::-webkit-scrollbar {
-    display: none;
+.cursor-pointer {
+    color: rgb(121 85 72);
 }
 
-html,
-body {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+.bg-ayur-offwhite {
+    background-color: rgb(248 245 240);
 }
 
-/* Font family override */
-body {
-    font-family: 'Inter', sans-serif !important;
-}
 
-/* Preserve Font Awesome icons */
-.fa,
-.fas,
-.far,
-.fal,
-.fab {
-    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
-}
-
-/* Highlighted section styles */
-.highlighted-section {
-    outline: 2px solid #3F20FB;
-    background-color: rgba(63, 32, 251, 0.1);
-}
-
-.edit-button {
-    position: absolute;
-    z-index: 1000;
+table.dataTable>tbody>tr {
+    background-color: transparent;
+    height: 64px !important;
 }

@@ -14,6 +14,10 @@ use App\Http\Controllers\Backend\UserController;
 Route::get('/', function () {
     return view('backend.auth.login');
 })->name('login');
+// Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
+
+// Handle login submit
+Route::post('/', [LoginController::class, 'login']);
 
 Route::get('logout', [LoginController::class, 'logout'])->name('logout');
 
@@ -62,6 +66,7 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     // Patient Management
     Route::get('/patients', [PatientController::class, 'index'])->name('patients');
     Route::post('/patients', [PatientController::class, 'store'])->name('patients.store');
+    Route::get('/patients/{patient}', [PatientController::class, 'show'])->name('patients.show');
     Route::get('/patients/{patient}/edit', [PatientController::class, 'edit'])->name('patients.edit');
     Route::put('/patients/{patient}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{patient}', [PatientController::class, 'destroy'])->name('patients.delete');

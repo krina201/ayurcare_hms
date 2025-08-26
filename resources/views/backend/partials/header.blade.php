@@ -4,7 +4,7 @@
             <button id="sidebarToggle" class="md:hidden text-stone-700 mr-2">
                 <i class="fa-solid fa-bars text-xl"></i>
             </button>
-            @php
+            {{-- @php
                 $segments = Request::segments();
                 $filteredSegments = $segments;
 
@@ -26,10 +26,11 @@
                 @else
                     <h2 class="text-lg font-semibold text-stone-800">{{ ucfirst($segment) }}</h2>
                 @endif
-            @endforeach
+            @endforeach --}}
 
-
+            <h2 class="text-lg font-semibold text-stone-800">{{ $pagename }}</h2>
         </div>
+
         <div class="flex items-center space-x-4">
             {{-- @permission('users.view') --}}
             <a href="{{ route('user') }}" class="text-stone-700 hover:bg-green-100 rounded-full p-2"

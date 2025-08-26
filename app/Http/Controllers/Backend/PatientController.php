@@ -27,7 +27,10 @@ class PatientController extends Controller
     //  Display the patient registration page.
     public function index(Request $request)
     {
-        $patients = Patient::latest()->limit(10)->get();
+        $pagename = 'Patient';
+        $breadcrumb = 'Patient';
+
+        $patients = Patient::latest()->get();
         $stats = $this->getDashboardStats();
 
         // Build search results (optional filters)
@@ -38,6 +41,9 @@ class PatientController extends Controller
         }
         if ($request->filled('full_name')) {
             $searchQuery->where('full_name', 'like', '%' . $request->input('full_name') . '%');
+        }
+        if ($request->filled('email')) {
+            $searchQuery->where('email', 'like', '%' . $request->input('email') . '%');
         }
         if ($request->filled('mobile')) {
             $searchQuery->where('mobile', 'like', '%' . $request->input('mobile') . '%');
@@ -50,16 +56,9 @@ class PatientController extends Controller
             $searchQuery->whereIn('registration_type', $types);
         }
 
-        $perPage = (int) $request->input('per_page', 25);
-        if ($perPage < 1) {
-            $perPage = 25;
-        }
-        if ($perPage > 100) {
-            $perPage = 100;
-        }
-        $searchResults = $searchQuery->orderByDesc('created_at')->paginate($perPage)->withQueryString();
+        $searchResults = $searchQuery->orderByDesc('created_at')->get();
 
-        return view('backend.patients.index', compact('patients', 'stats', 'searchResults'));
+        return view('backend.patients.index', compact('patients', 'stats', 'searchResults', 'pagename', 'breadcrumb'));
     }
 
     //   Store a newly created patient in storage.
@@ -70,6 +69,7 @@ class PatientController extends Controller
             $request->all(),
             [
                 'full_name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:patients,email',
                 'gender' => 'required|in:male,female,other',
                 'age' => 'required|integer|min:0|max:150',
                 'mobile' => 'required|digits:10',
@@ -108,6 +108,7 @@ class PatientController extends Controller
         $patient = Patient::create([
             'uhid' => $uhid,
             'full_name' => $validated['full_name'],
+            'email' => $validated['email'],
             'gender' => $validated['gender'],
             'age' => $validated['age'],
             'mobile' => $validated['mobile'],
@@ -134,13 +135,25 @@ class PatientController extends Controller
         }
     }
 
+    //  Show the patient profile dashboard
+    public function show(Patient $patient)
+    {
+        $pagename = 'Patient Profile';
+        $breadcrumb = 'Patient Profile';
+
+        return view('backend.patients.show', compact('pagename', 'breadcrumb', 'patient'));
+    }
+
     //  Show the form for editing the specified patient.
     public function edit(Patient $patient)
     {
-        $patients = Patient::latest()->limit(10)->get();
+        $pagename = 'Patient';
+        $breadcrumb = 'Patient';
+
+        $patients = Patient::latest()->get();
         $stats = $this->getDashboardStats();
 
-        return view('backend.patients.index', compact('patients', 'stats', 'patient'));
+        return view('backend.patients.index', compact('pagename', 'breadcrumb', 'patients', 'stats', 'patient'));
     }
 
     //  Update the specified patient in storage.
@@ -150,6 +163,7 @@ class PatientController extends Controller
             $request->all(),
             [
                 'full_name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:patients,email,' . $patient->id,
                 'gender' => 'required|in:male,female,other',
                 'age' => 'required|integer|min:0|max:150',
                 'mobile' => 'required|digits:10',
@@ -175,6 +189,7 @@ class PatientController extends Controller
 
         $updateData = [
             'full_name' => $validated['full_name'],
+            'email' => $validated['email'],
             'gender' => $validated['gender'],
             'age' => $validated['age'],
             'mobile' => $validated['mobile'],
