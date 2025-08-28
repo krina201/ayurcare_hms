@@ -24,9 +24,9 @@
 
             {{-- doctor management --}}
             <li>
-                <a href="{{ route('doctors') }}"
+                <a href="{{ route('doctor') }}"
                     class="flex items-center p-2 text-base font-medium rounded-lg cursor-pointer
-                           {{ request()->routeIs('doctors*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
+                           {{ request()->routeIs('doctor*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
                     <i class="fa-solid fa-user-doctor w-6 text-green-700"></i>
                     <span class="ml-3">{{ __('Doctor & Therapist') }}</span>
                 </a>
@@ -148,13 +148,13 @@
                 </li>
             @endcan
 
-            <li id="nav-logout" class="list-group-item border-0 bg-transparent">
+            {{-- <li id="nav-logout" class="list-group-item border-0 bg-transparent">
                 <a href="{{ route('logout') }}"
                     class="d-flex align-items-center p-3 rounded text-dark hover-gradient-gray {{ request()->routeIs('logout*') ? 'active' : 'collapsed' }}">
                     <i class="fa-solid fa-right-from-bracket" style="color: #6B7280"></i>
                     <span class="ms-3 sidebar-label">{{ __('logout') }}</span>
                 </a>
-            </li>
+            </li> --}}
         </ul>
     </div>
 </div>

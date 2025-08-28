@@ -10,6 +10,8 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Backend\PermissionController;
 use App\Http\Controllers\Backend\RoleController;
 use App\Http\Controllers\Backend\UserController;
+use App\Http\Controllers\Backend\DoctorController;
+
 
 Route::get('/', function () {
     return view('backend.auth.login');
@@ -19,8 +21,7 @@ Route::get('/', function () {
 // Handle login submit
 Route::post('/', [LoginController::class, 'login']);
 
-Route::get('logout', [LoginController::class, 'logout'])->name('logout');
-
+Route::match(['GET', 'POST'], '/logout', [LoginController::class, 'logout'])->name('logout');
 // Forgot & Reset Password
 Route::GET('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
 Route::POST('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
@@ -70,4 +71,10 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::get('/patients/{patient}/edit', [PatientController::class, 'edit'])->name('patients.edit');
     Route::put('/patients/{patient}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{patient}', [PatientController::class, 'destroy'])->name('patients.delete');
+
+
+    Route::get('/doctor', [DoctorController::class, 'index'])->name('doctor');
+    Route::get('/doctor/create', [DoctorController::class, 'create'])->name('doctor.create');
+    Route::post('/doctor/store', [DoctorController::class, 'store'])->name('doctor.store');
+    Route::get('/doctor/dashboard', [DoctorController::class, 'dashboard'])->name('doctor.dashboard');
 });
