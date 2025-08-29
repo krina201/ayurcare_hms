@@ -36,7 +36,47 @@ class Patient extends Model
         'registration_date' => 'date',
     ];
 
-    // Use default route key name 'id' for implicit binding
+    // Accessor for full name
+    public function getFullNameAttribute()
+    {
+        return $this->first_name . ' ' . $this->last_name;
+    }
 
-    // No self-referencing relation needed here
+    // Relationship with prescriptions
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    // Get active prescriptions
+    public function activePrescriptions()
+    {
+        return $this->prescriptions()->where('status', 'active');
+    }
+
+    // Get recent prescriptions
+    public function recentPrescriptions($limit = 5)
+    {
+        return $this->prescriptions()
+            ->with('doctor')
+            ->orderBy('prescription_date', 'desc')
+            ->limit($limit);
+    }
+
+    // Get current medications from active prescriptions
+    public function getCurrentMedications()
+    {
+        return $this->activePrescriptions()
+            ->with('items')
+            ->get()
+            ->flatMap(function ($prescription) {
+                return $prescription->items;
+            });
+    }
+
+    // Check if patient has any active prescriptions
+    public function hasActivePrescriptions()
+    {
+        return $this->activePrescriptions()->exists();
+    }
 }

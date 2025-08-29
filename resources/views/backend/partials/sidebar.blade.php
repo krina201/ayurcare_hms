@@ -34,9 +34,9 @@
 
             {{-- appointment management --}}
             <li>
-                <a href="{{ route('appointments.index') }}"
+                <a href="{{ route('appointment') }}"
                     class="flex items-center p-2 text-base font-medium rounded-lg cursor-pointer
-                           {{ request()->routeIs('appointments*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
+                           {{ request()->routeIs('appointment*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
                     <i class="fa-solid fa-calendar-check w-6 text-green-700"></i>
                     <span class="ml-3">{{ __('Appointments') }}</span>
                 </a>

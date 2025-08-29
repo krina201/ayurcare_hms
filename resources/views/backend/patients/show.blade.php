@@ -3,6 +3,23 @@
 @section('content')
     <!-- MAIN CONTENT -->
     <main class="p-4">
+
+        <div class="mb-4">
+            @if (session('status'))
+                <div class="bg-green-50 text-green-700 px-4 py-2 rounded border border-green-200">
+                    {{ session('status') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="bg-red-50 text-red-700 px-4 py-2 rounded border border-red-200">
+                    <ul class="list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+
         <!-- PATIENT INFO -->
         <div id="patientInfo" class="bg-white rounded-lg shadow-md p-6 mb-6">
             <div class="flex flex-col md:flex-row">
@@ -240,10 +257,11 @@
                             <i class="fa-solid fa-search text-gray-400"></i>
                         </div>
                     </div>
-                    <button
-                        class="bg-ayur-green-600 text-white hover:bg-ayur-green-700 font-medium rounded-lg text-sm px-4 py-2">
+                    <a href="{{ route('patients.prescriptions.create', $patient) }}"
+                        class="bg-ayur-green-600 text-white hover:bg-ayur-green-700 font-medium rounded-lg text-sm px-4 py-2"
+                        role="button">
                         <i class="fa-solid fa-plus mr-1"></i> Add Prescription
-                    </button>
+                    </a>
                 </div>
             </div>
 

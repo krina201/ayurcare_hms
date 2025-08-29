@@ -27,22 +27,36 @@
                 </nav>
             </div>
         </div>
-
         <!-- DOCTOR PROFILE HEADER -->
         <div id="doctorProfileHeader" class="bg-white rounded-lg shadow-md p-6 mb-6">
             <div class="flex flex-col md:flex-row items-start md:items-center">
                 <div class="flex items-center mb-4 md:mb-0">
-                    <img class="h-16 w-16 rounded-full border-2 border-ayur-green-500"
-                        src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Dr. Sharma">
+                    {{-- Use the doctor's photo from the database --}}
+                    <img class="h-16 w-16 rounded-full border-2 border-ayur-green-500 object-cover"
+                        src="{{ asset($doctor->photo) }}" alt="Photo of {{ $doctor->full_name }}">
                     <div class="ml-4">
-                        <h3 class="text-xl font-semibold text-ayur-brown-800">Dr. Anil Sharma</h3>
-                        <p class="text-ayur-brown-600">Ayurvedic Physician, BAMS, MD (Kayachikitsa)</p>
+                        {{-- Display doctor's full name --}}
+                        <h3 class="text-xl font-semibold text-ayur-brown-800">{{ $doctor->full_name }}</h3>
+
+                        {{-- Display specialty and qualification --}}
+                        <p class="text-ayur-brown-600">{{ $doctor->specialty }}, {{ $doctor->qualification }}</p>
+
                         <div class="flex items-center mt-1">
-                            <span
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-ayur-green-100 text-ayur-green-800 mr-2">
-                                <i class="fa-solid fa-circle-check mr-1 text-ayur-green-600"></i> Verified
-                            </span>
-                            <span class="text-sm text-ayur-brown-600">ID: DOC-2025-112</span>
+                            {{-- Status can be dynamic later if you add it to the DB --}}
+                            @if ($doctor->status == 1)
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-ayur-green-100 text-ayur-green-800 mr-2">
+                                    <i class="fa-solid fa-circle-check mr-1 text-ayur-green-600"></i> Verified
+                                </span>
+                            @else
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                                    <i class="fa-solid fa-circle-xmark mr-1 text-red-600"></i> Not Verified
+                                </span>
+                            @endif
+
+                            {{-- Display the unique doctor ID --}}
+                            <span class="text-sm text-ayur-brown-600">ID: {{ $doctor->doctor_id }}</span>
                         </div>
                     </div>
                 </div>

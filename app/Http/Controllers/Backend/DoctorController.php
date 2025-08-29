@@ -16,9 +16,9 @@ class DoctorController extends Controller
     {
         $pagename = 'Doctor';
         $breadcrumb = 'Doctor';
-        $doctors = Doctor::latest()->get();
+        $doctor = Doctor::all();
 
-        return view('backend.doctor.index', compact('breadcrumb', 'pagename', 'doctors'));
+        return view('backend.doctor.index', compact('breadcrumb', 'pagename', 'doctor'));
     }
 
     public function create()
@@ -140,6 +140,9 @@ class DoctorController extends Controller
         $pagename = 'Doctor Dashboard';
         $breadcrumb = 'Doctor Dashboard';
 
-        return view('backend.doctor.dashboard', compact('breadcrumb', 'pagename')); // this is the file you asked to open
+        // Find the doctor with ID 1 or show a 404 error if not found.
+        $doctor = Doctor::findOrFail(1);
+
+        return view('backend.doctor.dashboard', compact('breadcrumb', 'pagename', 'doctor'));
     }
 }

@@ -11,6 +11,8 @@ use App\Http\Controllers\Backend\PermissionController;
 use App\Http\Controllers\Backend\RoleController;
 use App\Http\Controllers\Backend\UserController;
 use App\Http\Controllers\Backend\DoctorController;
+use App\Http\Controllers\Backend\PrescriptionController;
+use App\Http\Controllers\Backend\AppointmentController;
 
 
 Route::get('/', function () {
@@ -72,9 +74,17 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::put('/patients/{patient}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{patient}', [PatientController::class, 'destroy'])->name('patients.delete');
 
+    // Prescription Routes
+    Route::get('/patients/{patient}/prescriptions/create', [PrescriptionController::class, 'create'])->name('patients.prescriptions.create');
+    Route::post('/patients/{patient}/prescriptions', [PrescriptionController::class, 'store'])->name('patients.prescriptions.store');
+    Route::get('/patients/{patient}/prescriptions/{prescription}/edit', [PrescriptionController::class, 'edit'])->name('patients.prescriptions.edit');
+    Route::put('/patients/{patient}/prescriptions/{prescription}', [PrescriptionController::class, 'update'])->name('patients.prescriptions.update');
 
     Route::get('/doctor', [DoctorController::class, 'index'])->name('doctor');
     Route::get('/doctor/create', [DoctorController::class, 'create'])->name('doctor.create');
     Route::post('/doctor/store', [DoctorController::class, 'store'])->name('doctor.store');
     Route::get('/doctor/dashboard', [DoctorController::class, 'dashboard'])->name('doctor.dashboard');
+
+    // Appointment Routes
+    Route::get('/appointment', [AppointmentController::class, 'index'])->name('appointment');
 });
