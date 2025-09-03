@@ -69,7 +69,7 @@ class PrescriptionController extends Controller
                 'priority' => $validatedData['priority'],
                 'notes' => $validatedData['notes'] ?? null,
                 'special_notes' => $validatedData['special_notes'] ?? null,
-                'status' => $request->has('save_as_draft') ? 'draft' : 'active',
+                'status' => $request->has('save_as_draft') ? 1 : 0,
             ]);
 
             foreach ($validatedData['medications'] as $medicationData) {

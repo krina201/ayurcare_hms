@@ -42,6 +42,16 @@
                 </a>
             </li>
 
+            {{-- accounting --}}
+            <li>
+                <a href="{{ route('accounting') }}"
+                    class="flex items-center p-2 text-base font-medium rounded-lg cursor-pointer
+                           {{ request()->routeIs('accounting*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
+                    <i class="fa-solid fa-money-bill-transfer text-green-700"></i>
+                    <span class="ml-3">{{ __('Accounting') }}</span>
+                </a>
+            </li>
+
             {{-- panchkarma management --}}
             <li>
                 <a href="{{ route('panchkarma.index') }}"
@@ -54,7 +64,7 @@
 
             {{-- pharmacy management --}}
             <li>
-                <a href="{{ route('pharmacy.index') }}"
+                <a href="{{ route('pharmacy') }}"
                     class="flex items-center p-2 text-base font-medium rounded-lg cursor-pointer
                            {{ request()->routeIs('pharmacy*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
                     <i class="fa-solid fa-mortar-pestle w-6 text-green-700"></i>
@@ -101,6 +111,8 @@
                     <span class="ml-3">{{ __('Reports & Analytics') }}</span>
                 </a>
             </li>
+
+
 
             {{-- admin settings --}}
             <li>

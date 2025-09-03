@@ -36,7 +36,8 @@ return new class extends Migration
             $table->string('degree_certificate')->nullable();
             $table->string('registration_certificate')->nullable();
             $table->string('photo')->nullable();
-            $table->boolean('status')->default(true);
+            // $table->boolean('status')->default(true);
+            $table->tinyInteger('status')->default(1);
             $table->timestamps();
         });
     }

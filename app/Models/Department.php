@@ -16,14 +16,10 @@ class Department extends Model
         'code',
         'description',
         'head_doctor_name',
-        'is_active'
+        'status'
     ];
 
-    // Relationships
-    public function doctors()
-    {
-        return $this->hasMany(Doctor::class);
-    }
+
 
     public function activeDoctors()
     {

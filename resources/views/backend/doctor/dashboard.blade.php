@@ -490,5 +490,6 @@
     </main>
 @endsection
 
-@section('js')
+
+@section('scripts')
 @endsection

@@ -141,7 +141,14 @@ class PatientController extends Controller
         $pagename = 'Patient Profile';
         $breadcrumb = 'Patient Profile';
 
-        return view('backend.patients.show', compact('pagename', 'breadcrumb', 'patient'));
+        // Load ALL appointments with related doctor and department data (no limits)
+        $appointments = $patient->appointments()
+            ->with(['doctor', 'department'])
+            ->orderBy('appointment_date', 'desc')
+            ->orderBy('appointment_time', 'desc')
+            ->get();
+
+        return view('backend.patients.show', compact('pagename', 'breadcrumb', 'patient', 'appointments'));
     }
 
     //  Show the form for editing the specified patient.

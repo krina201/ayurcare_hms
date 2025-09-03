@@ -61,10 +61,10 @@
                                 title="Edit">
                                 <i class="fa-solid fa-edit mr-2"></i> Edit</a>
                             {{-- @endpermission --}}
-                            <button
+                            <a href="{{ route('appointment', ['uhid' => $patient->uhid]) }}"
                                 class="bg-ayur-yellow-100 text-ayur-yellow-700 hover:bg-ayur-yellow-200 font-medium rounded-lg text-sm px-4 py-2 flex items-center">
                                 <i class="fa-solid fa-calendar-plus mr-2"></i> New Appointment
-                            </button>
+                            </a>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -106,7 +106,7 @@
                 <div class="flex overflow-x-auto scrollbar-hide">
                     <button id="visitsTab"
                         class="flex-shrink-0 px-6 py-4 text-ayur-green-600 border-b-2 border-ayur-green-500 font-medium text-sm focus:outline-none">
-                        <i class="fa-solid fa-calendar-check mr-2"></i> Past Visits
+                        <i class="fa-solid fa-calendar-check mr-2"></i> Appointments
                     </button>
                     <button id="prescriptionsTab"
                         class="flex-shrink-0 px-6 py-4 text-ayur-brown-600 hover:text-ayur-brown-800 font-medium text-sm focus:outline-none">
@@ -132,22 +132,22 @@
             </div>
         </div>
 
-        <!-- VISITS TAB CONTENT -->
+        <!-- APPOINTMENTS TAB CONTENT -->
         <div id="visitsTabContent" class="bg-white rounded-lg shadow-md p-6 mb-6">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold text-ayur-brown-800">Past Visits</h3>
+                <h3 class="text-xl font-semibold text-ayur-brown-800">Patient Appointment History</h3>
                 <div class="flex items-center">
                     <div class="relative mr-2">
-                        <input type="text" placeholder="Search visits..."
+                        <input type="text" placeholder="Search appointments..."
                             class="pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-ayur-green-500 focus:border-ayur-green-500 text-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fa-solid fa-search text-gray-400"></i>
                         </div>
                     </div>
-                    <button
-                        class="bg-ayur-green-600 text-white hover:bg-ayur-green-700 font-medium rounded-lg text-sm px-4 py-2">
-                        <i class="fa-solid fa-plus mr-1"></i> New Visit
-                    </button>
+                    <a href="{{ route('appointment', ['uhid' => $patient->uhid]) }}"
+                        class="bg-ayur-green-600 text-white hover:bg-ayur-green-700 font-medium rounded-lg text-sm px-4 py-2 inline-flex items-center">
+                        <i class="fa-solid fa-plus mr-1"></i> New Appointment
+                    </a>
                 </div>
             </div>
 
@@ -157,89 +157,104 @@
                         <tr>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                Visit Date</th>
+                                Appointment Date</th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                Visit Type</th>
+                                Mode</th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
                                 Doctor</th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                Chief Complaint</th>
+                                Department</th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
-                                Treatment</th>
+                                Status</th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
                                 Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse($appointments as $appointment)
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">15 Jul, 2025</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ayur-green-100 text-ayur-green-800">OPD</span>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">
+                                {{ $appointment->appointment_date ? $appointment->appointment_date->format('d M, Y') : 'N/A' }}
+                                @if($appointment->appointment_time)
+                                <br><span class="text-xs text-ayur-brown-600">{{ $appointment->appointment_time->format('h:i A') }}</span>
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
+                                <span
+                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    @if($appointment->mode === 'OPD') bg-ayur-green-100 text-ayur-green-800
+                                    @elseif($appointment->mode === 'Panchkarma') bg-ayur-yellow-100 text-ayur-yellow-800
+                                    @else bg-ayur-blue-100 text-ayur-blue-800
+                                    @endif">
+                                    {{ $appointment->mode ?? 'N/A' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($appointment->doctor)
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-8 w-8">
                                         <img class="h-8 w-8 rounded-full"
-                                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg"
-                                            alt="">
+                                            src="{{ $appointment->doctor->photo_path ? asset($appointment->doctor->photo_path) : asset('backend-assets/media/uploads/doctors/photos/1756374865_photo_SYtF2ghp.jpg') }}"
+                                            alt="{{ $appointment->doctor->full_name }}">
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-ayur-brown-800">Dr. Sharma</div>
-                                        <div class="text-xs text-ayur-brown-600">Ayurvedic Physician</div>
+                                        <div class="text-sm font-medium text-ayur-brown-800">{{ $appointment->doctor->full_name }}</div>
+                                        <div class="text-xs text-ayur-brown-600">{{ $appointment->doctor->specialization ?? 'General Physician' }}</div>
                                     </div>
                                 </div>
+                                @else
+                                <span class="text-sm text-ayur-brown-600">Not Assigned</span>
+                                @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Chronic Digestive
-                                Issues</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Dietary changes,
-                                Herbal formulation</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                {{ $appointment->department->name ?? 'N/A' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                    @if($appointment->status === 'Completed') bg-ayur-green-100 text-ayur-green-800
+                                    @elseif($appointment->status === 'Scheduled') bg-ayur-blue-100 text-ayur-blue-800
+                                    @elseif($appointment->status === 'Waiting') bg-ayur-yellow-100 text-ayur-yellow-800
+                                    @elseif($appointment->status === 'Cancelled') bg-red-100 text-red-800
+                                    @else bg-gray-100 text-gray-800
+                                    @endif">
+                                    {{ $appointment->status ?? 'N/A' }}
+                                </span>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"><i
-                                        class="fa-solid fa-eye"></i></button>
-                                <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"><i
-                                        class="fa-solid fa-print"></i></button>
-                                <button class="text-ayur-yellow-600 hover:text-ayur-yellow-900"><i
-                                        class="fa-solid fa-share"></i></button>
+                                <a href="{{ route('appointments.show', $appointment->id) }}" 
+                                   class="text-ayur-green-600 hover:text-ayur-green-900 mr-3" 
+                                   title="View Details">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                @if($appointment->status === 'Completed')
+                                <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3" title="Print">
+                                    <i class="fa-solid fa-print"></i>
+                                </button>
+                                @endif
+                                <button class="text-ayur-yellow-600 hover:text-ayur-yellow-900" title="Share">
+                                    <i class="fa-solid fa-share"></i>
+                                </button>
                             </td>
-                        </tr>
+                                                </tr>
+                        @empty
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">28 Jun, 2025</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ayur-yellow-100 text-ayur-yellow-800">IPD</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-8 w-8">
-                                        <img class="h-8 w-8 rounded-full"
-                                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
-                                            alt="">
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-ayur-brown-800">Dr. Patel</div>
-                                        <div class="text-xs text-ayur-brown-600">Panchkarma Specialist</div>
-                                    </div>
+                            <td colspan="6" class="px-6 py-8 text-center text-ayur-brown-600">
+                                <div class="flex flex-col items-center">
+                                    <i class="fa-solid fa-calendar-times text-4xl mb-2 text-ayur-brown-400"></i>
+                                    <p class="text-sm">No appointments found for this patient</p>
+                                    <a href="{{ route('appointment', ['uhid' => $patient->uhid]) }}" 
+                                       class="mt-2 text-ayur-green-600 hover:text-ayur-green-800 text-sm font-medium">
+                                        Book First Appointment
+                                    </a>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Chronic Lower Back
-                                Pain</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Kati Basti,
-                                Abhyanga, Herbal oils</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"><i
-                                        class="fa-solid fa-eye"></i></button>
-                                <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"><i
-                                        class="fa-solid fa-print"></i></button>
-                                <button class="text-ayur-yellow-600 hover:text-ayur-yellow-900"><i
-                                        class="fa-solid fa-share"></i></button>
-                            </td>
                         </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -391,7 +406,7 @@
 
     </main>
 @endsection
-@push('scripts')
+@section('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('backend-assets/js/validation/patients/patientShow.js') }}"></script>
-@endpush
+@endsection

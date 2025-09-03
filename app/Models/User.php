@@ -25,6 +25,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
+        'is_active',
+        'web_loging',
     ];
 
     /**
@@ -53,5 +56,17 @@ class User extends Authenticatable
     public function role()
     {
         return $this->belongsTo(Role::class, 'role_id', 'id');
+    }
+
+    // Accessor for status (backward compatibility)
+    public function getStatusAttribute()
+    {
+        return $this->is_active;
+    }
+
+    // Scope for active users
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', 1);
     }
 }

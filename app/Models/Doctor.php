@@ -46,4 +46,16 @@ class Doctor extends Model
         'expertise_areas' => 'array',
         'panchkarma_treatments' => 'array',
     ];
+
+    // Relationship with department
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    // Relationship with appointments
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
 }

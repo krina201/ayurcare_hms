@@ -119,7 +119,7 @@
                     <h4 class="text-lg font-medium text-stone-800">Search Results </h4>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 example">
+                    <table class="min-w-full divide-y divide-gray-200" id="example">
                         <thead class="bg-ayur-offwhite">
                             <tr>
                                 <th
@@ -803,7 +803,7 @@
     </main>
 @endsection
 
-@push('scripts')
+@section('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
@@ -1121,4 +1121,4 @@
             });
         });
     </script>
-@endpush
+@endsection

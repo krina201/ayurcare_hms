@@ -504,7 +504,7 @@
     </main>
 @endsection
 
-@section('js')
+@section('scripts')
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const form = document.querySelector("#doctorProfileForm form");

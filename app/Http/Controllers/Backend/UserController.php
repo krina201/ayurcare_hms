@@ -164,7 +164,7 @@ class UserController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users,email,' . $id,
                 'role_id' => 'required',
-                'web_loging' => 'required',
+                // 'web_loging' => 'required',
                 'is_active' => 'nullable|boolean',
             ],
             [
@@ -177,7 +177,7 @@ class UserController extends Controller
                 'email.max' => 'Email may not be greater than 255 characters.',
                 'email.unique' => 'Email address is already taken.',
                 'role_id.required' => 'Role selection is required.',
-                'web_loging.required' => 'Loging Devices field is required.',
+                // 'web_loging.required' => 'Loging Devices field is required.',
             ]
         );
 

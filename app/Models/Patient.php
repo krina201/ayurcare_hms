@@ -36,16 +36,34 @@ class Patient extends Model
         'registration_date' => 'date',
     ];
 
-    // Accessor for full name
-    public function getFullNameAttribute()
+    // Accessor for name field (backward compatibility)
+    public function getNameAttribute()
     {
-        return $this->first_name . ' ' . $this->last_name;
+        return $this->full_name;
+    }
+
+    // Accessor for patient_id field (backward compatibility)
+    public function getPatientIdAttribute()
+    {
+        return $this->uhid;
+    }
+
+    // Accessor for profile_image field (backward compatibility)
+    public function getProfileImageAttribute()
+    {
+        return $this->photo_path;
     }
 
     // Relationship with prescriptions
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
+    }
+
+    // Relationship with appointments
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
     }
 
     // Get active prescriptions

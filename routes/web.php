@@ -13,6 +13,9 @@ use App\Http\Controllers\Backend\UserController;
 use App\Http\Controllers\Backend\DoctorController;
 use App\Http\Controllers\Backend\PrescriptionController;
 use App\Http\Controllers\Backend\AppointmentController;
+use App\Http\Controllers\Backend\CalendarApiController;
+use App\Http\Controllers\Backend\AccountingController;
+use App\Http\Controllers\Backend\PharmacyController;
 
 
 Route::get('/', function () {
@@ -64,8 +67,6 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::PATCH('/role/update/{id}', [RoleController::class, 'update'])->name('role.update');
     Route::delete('/role/delete/{id}', [RoleController::class, 'destroy'])->name('role.delete');
 
-
-
     // Patient Management
     Route::get('/patients', [PatientController::class, 'index'])->name('patients');
     Route::post('/patients', [PatientController::class, 'store'])->name('patients.store');
@@ -87,4 +88,49 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
 
     // Appointment Routes
     Route::get('/appointment', [AppointmentController::class, 'index'])->name('appointment');
+    Route::get('/appointment/calendar', [AppointmentController::class, 'calendar'])->name('appointment.calendar');
+    Route::post('/appointment', [AppointmentController::class, 'store'])->name('appointment.store');
+    Route::get('/appointment/search-patient', [AppointmentController::class, 'searchPatient'])->name('appointment.search-patient');
+    Route::get('/appointment/test-search', [AppointmentController::class, 'testPatientSearch'])->name('appointment.test-search');
+    Route::get('/appointment/doctor-fees', [AppointmentController::class, 'getDoctorFees'])->name('appointment.doctor-fees');
+    Route::get('/appointment/doctor-time-slots', [AppointmentController::class, 'getDoctorTimeSlots'])->name('appointment.doctor-time-slots');
+    Route::get('/appointment/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
+
+    // Calendar API Routes
+    Route::get('/calendar/data', [CalendarApiController::class, 'getCalendarData'])->name('calendar.data');
+    Route::get('/calendar/time-slots', [CalendarApiController::class, 'getAvailableTimeSlots'])->name('calendar.time-slots');
+    Route::get('/calendar/stats', [CalendarApiController::class, 'getCalendarStats'])->name('calendar.stats');
+    Route::get('/calendar/appointments', [CalendarApiController::class, 'getAppointments'])->name('calendar.appointments');
+    Route::get('/calendar/doctor-schedule', [CalendarApiController::class, 'getDoctorSchedule'])->name('calendar.doctor-schedule');
+    Route::get('/calendar/overlaps', [CalendarApiController::class, 'checkOverlaps'])->name('calendar.overlaps');
+
+    // Accounting Routes
+    Route::get('/accounting', [AccountingController::class, 'index'])->name('accounting');
+    Route::post('/accounting', [AccountingController::class, 'store'])->name('accounting.store');
+    Route::get('/accounting/{id}/edit', [AccountingController::class, 'edit'])->name('accounting.edit');
+    Route::PATCH('/accounting/{id}', [AccountingController::class, 'update'])->name('accounting.update');
+    Route::delete('/accounting/{id}', [AccountingController::class, 'destroy'])->name('accounting.destroy');
+    Route::get('/accounting/stats', [AccountingController::class, 'getStats'])->name('accounting.stats');
+
+    // Pharmacy Routes
+    Route::get('/pharmacy', [PharmacyController::class, 'index'])->name('pharmacy');
+    Route::GET('/pharmacy/create', [PharmacyController::class, 'create'])->name('pharmacy.create');
+    Route::post('/pharmacy/store', [PharmacyController::class, 'store'])->name('pharmacy.store');
+    Route::GET('/pharmacy/dispense', [PharmacyController::class, 'dispense'])->name('pharmacy.dispense');
+    Route::get('/pharmacy/restock', [PharmacyController::class, 'restock'])->name('pharmacy.restock');
+
+    // Pharmacy API Routes (must come before parameterized routes)
+    Route::get('/pharmacy/search-patient', [PharmacyController::class, 'searchPatient'])->name('pharmacy.search-patient');
+    Route::get('/pharmacy/search-medicines', [PharmacyController::class, 'searchMedicines'])->name('pharmacy.search-medicines');
+    Route::get('/pharmacy/get-prescriptions', [PharmacyController::class, 'getPatientPrescriptions'])->name('pharmacy.get-prescriptions');
+    Route::get('/pharmacy/inventory', [PharmacyController::class, 'getMedicineInventory'])->name('pharmacy.inventory');
+    Route::get('/pharmacy/available-medicines', [PharmacyController::class, 'getAvailableMedicines'])->name('pharmacy.available-medicines');
+    Route::post('/pharmacy/process-dispense', [PharmacyController::class, 'processDispense'])->name('pharmacy.process-dispense');
+    Route::post('/pharmacy/store-dispense-form', [PharmacyController::class, 'storeDispenseForm'])->name('pharmacy.store-dispense-form');
+
+    // Parameterized pharmacy routes (must come after API routes)
+    Route::get('/pharmacy/{medicine}/edit', [PharmacyController::class, 'edit'])->name('pharmacy.edit');
+    Route::put('/pharmacy/{medicine}', [PharmacyController::class, 'update'])->name('pharmacy.update');
+    Route::delete('/pharmacy/{medicine}', [PharmacyController::class, 'destroy'])->name('pharmacy.delete');
+    Route::get('/pharmacy/{medicine}', [PharmacyController::class, 'show'])->name('pharmacy.show');
 });
