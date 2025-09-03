@@ -255,6 +255,69 @@ class PatientController extends Controller
         return redirect()->route('patients')->with('error', 'Failed to delete patient');
     }
 
+    /**
+     * Search patients by UHID, name, or mobile number
+     */
+    public function search(Request $request)
+    {
+        $query = trim($request->get('query', ''));
+
+        if (empty($query) || strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        // Sanitize the query to prevent SQL injection
+        $query = strip_tags($query);
+
+        // Search for patients
+        $patients = Patient::where(function ($q) use ($query) {
+            $q->where('uhid', 'LIKE', "%{$query}%")
+                ->orWhere('full_name', 'LIKE', "%{$query}%")
+                ->orWhere('mobile', 'LIKE', "%{$query}%")
+                ->orWhere('email', 'LIKE', "%{$query}%");
+        })
+            ->select([
+                'id',
+                'uhid',
+                'full_name',
+                'gender',
+                'age',
+                'mobile',
+                'email',
+                'prakriti',
+                'allergies',
+                'photo_path',
+                'registration_date',
+                'registration_type'
+            ])
+            ->limit(10)
+            ->get();
+
+        // If no results found, return empty array
+        if ($patients->isEmpty()) {
+            return response()->json([]);
+        }
+
+        // Format the results
+        $formattedPatients = $patients->map(function ($patient) {
+            return [
+                'id' => $patient->id,
+                'uhid' => $patient->uhid ?? 'N/A',
+                'full_name' => $patient->full_name ?? 'N/A',
+                'gender' => $patient->gender ?? 'N/A',
+                'age' => $patient->age ?? 'N/A',
+                'mobile' => $patient->mobile ?? 'N/A',
+                'email' => $patient->email ?? 'N/A',
+                'prakriti' => $patient->prakriti ?? 'N/A',
+                'allergies' => $patient->allergies ?? 'None',
+                'photo_path' => $patient->photo_path ?? null,
+                'registration_date' => $patient->registration_date ? $patient->registration_date->format('d/m/Y') : 'N/A',
+                'registration_type' => $patient->registration_type ?? 'N/A'
+            ];
+        });
+
+        return response()->json($formattedPatients);
+    }
 
     // Generate a new UHID code.
     protected function generateUhid(): string

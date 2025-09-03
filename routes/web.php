@@ -16,6 +16,7 @@ use App\Http\Controllers\Backend\AppointmentController;
 use App\Http\Controllers\Backend\CalendarApiController;
 use App\Http\Controllers\Backend\AccountingController;
 use App\Http\Controllers\Backend\PharmacyController;
+use App\Http\Controllers\Backend\TreatmentPlanController;
 
 
 Route::get('/', function () {
@@ -75,6 +76,7 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::put('/patients/{patient}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{patient}', [PatientController::class, 'destroy'])->name('patients.delete');
 
+
     // Prescription Routes
     Route::get('/patients/{patient}/prescriptions/create', [PrescriptionController::class, 'create'])->name('patients.prescriptions.create');
     Route::post('/patients/{patient}/prescriptions', [PrescriptionController::class, 'store'])->name('patients.prescriptions.store');
@@ -133,4 +135,19 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::put('/pharmacy/{medicine}', [PharmacyController::class, 'update'])->name('pharmacy.update');
     Route::delete('/pharmacy/{medicine}', [PharmacyController::class, 'destroy'])->name('pharmacy.delete');
     Route::get('/pharmacy/{medicine}', [PharmacyController::class, 'show'])->name('pharmacy.show');
+
+    // Treatment Plan Routes
+    Route::get('/treatment-plan', [TreatmentPlanController::class, 'index'])->name('treatment-plan');
+    Route::post('/treatment-plan', [TreatmentPlanController::class, 'store'])->name('treatment-plan.store');
+
+    // Treatment Plan API Routes (must come before parameterized routes)
+    Route::get('/treatment-plan/search-patient', [TreatmentPlanController::class, 'searchPatient'])->name('treatment-plan.search-patient');
+
+    // Parameterized treatment plan routes (must come after API routes)
+    Route::get('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'show'])->name('treatment-plan.show');
+    Route::get('/treatment-plan/{treatmentPlan}/edit', [TreatmentPlanController::class, 'edit'])->name('treatment-plan.edit');
+    Route::put('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'update'])->name('treatment-plan.update');
+    Route::delete('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'destroy'])->name('treatment-plan.delete');
+    Route::patch('/treatment-plan/{treatmentPlan}/status', [TreatmentPlanController::class, 'updateStatus'])->name('treatment-plan.update-status');
+    Route::get('/treatment-plan/{treatmentPlan}/download-consent', [TreatmentPlanController::class, 'downloadConsent'])->name('treatment-plan.download-consent');
 });
