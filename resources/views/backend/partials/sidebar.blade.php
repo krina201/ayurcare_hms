@@ -77,7 +77,7 @@
                 <a href="{{ route('treatment-plan') }}"
                     class="flex items-center p-2 text-base font-medium rounded-lg cursor-pointer
                            {{ request()->routeIs('treatment-plan*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
-                    <i class="fa-solid fa-mortar-pestle w-6 text-green-700"></i>
+                    <i class="fa-solid fa-clipboard-list w-6 text-ayur-green-700"></i>
                     <span class="ml-3">{{ __('Treatment Plan') }}</span>
                 </a>
             </li>

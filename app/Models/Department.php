@@ -21,9 +21,14 @@ class Department extends Model
 
 
 
+    public function doctors()
+    {
+        return $this->hasMany(Doctor::class, 'specialty', 'id');
+    }
+
     public function activeDoctors()
     {
-        return $this->hasMany(Doctor::class)->where('is_active', true);
+        return $this->hasMany(Doctor::class, 'specialty', 'id')->where('status', 1);
     }
 
     public function appointments()

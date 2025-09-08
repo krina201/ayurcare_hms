@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Doctor;
+use App\Models\Department;
+use App\Models\MasterExpertiseArea;
+use App\Models\MasterTreatmentCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
@@ -17,8 +20,11 @@ class DoctorController extends Controller
         $pagename = 'Doctor';
         $breadcrumb = 'Doctor';
         $doctor = Doctor::all();
+        $departments = Department::where('is_active', 1)->get();
+        $expertiseAreas = MasterExpertiseArea::where('status', 1)->get();
+        $treatmentCategories = MasterTreatmentCategory::where('status', 1)->get();
 
-        return view('backend.doctor.index', compact('breadcrumb', 'pagename', 'doctor'));
+        return view('backend.doctor.index', compact('breadcrumb', 'pagename', 'doctor', 'departments', 'expertiseAreas', 'treatmentCategories'));
     }
 
     public function create()
@@ -37,7 +43,7 @@ class DoctorController extends Controller
                 'mobile'                => 'required|digits:10',
                 'dob'                   => 'required|date|before:today',
                 'address'               => 'required|string|max:500',
-                'specialty'             => 'required|string',
+                'specialty'             => 'required|integer|exists:departments,id',
                 'qualification'         => 'required|string|max:255',
                 'experience'            => 'required|integer|min:0|max:50',
                 'registration_number'   => 'required|string|unique:doctors,registration_number',
@@ -53,9 +59,9 @@ class DoctorController extends Controller
                 'evening_to'            => 'required|date_format:H:i|after:evening_from',
                 'time_per_consultation' => 'required|integer|in:15,20,30,45,60',
                 'expertise_areas'       => 'required|array|min:1',
-                'expertise_areas.*'     => 'required|string',
+                'expertise_areas.*'     => 'required|integer|exists:master_expertise_areas,id',
                 'panchkarma_treatments' => 'required|array|min:1',
-                'panchkarma_treatments.*' => 'required|string',
+                'panchkarma_treatments.*' => 'required|integer|exists:master_treatment_categories,id',
                 'degree_certificate'    => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
                 'registration_certificate' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
                 'photo'                 => 'required|image|mimes:jpg,jpeg,png|max:5120',
@@ -68,6 +74,12 @@ class DoctorController extends Controller
         }
 
         $validated = $validator->validated();
+
+
+        // Commission % validation
+        if ($validated['commission_type'] == 'percentage' && $validated['commission_value'] > 100) {
+            return back()->withErrors(['commission_value' => 'Percentage cannot exceed 100%'])->withInput();
+        }
 
         // Additional validation for commission value based on type
         if ($validated['commission_type'] == 'percentage' && $validated['commission_value'] > 100) {
@@ -87,10 +99,9 @@ class DoctorController extends Controller
         $validated['doctor_id'] = 'DOC-' . now()->year . '-' . strtoupper(Str::random(6));
         $validated['status'] = 1;
 
-        // Convert arrays to JSON for database storage
-        $validated['available_days'] = json_encode($validated['available_days']);
-        $validated['expertise_areas'] = json_encode($validated['expertise_areas']);
-        $validated['panchkarma_treatments'] = json_encode($validated['panchkarma_treatments']);
+        // Convert to integers - mutators will handle JSON conversion
+        $validated['expertise_areas'] = array_map('intval', $validated['expertise_areas']);
+        $validated['panchkarma_treatments'] = array_map('intval', $validated['panchkarma_treatments']);
 
         // Create upload directories if they don't exist
         $this->ensureDirectoryExists('backend-assets/media/uploads/doctors/photos');
@@ -140,8 +151,8 @@ class DoctorController extends Controller
         $pagename = 'Doctor Dashboard';
         $breadcrumb = 'Doctor Dashboard';
 
-        // Find the doctor with ID 1 or show a 404 error if not found.
-        $doctor = Doctor::findOrFail(1);
+        // Get the first available doctor or null if none exists
+        $doctor = Doctor::first();
 
         return view('backend.doctor.dashboard', compact('breadcrumb', 'pagename', 'doctor'));
     }

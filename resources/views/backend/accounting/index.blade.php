@@ -29,6 +29,46 @@
             transform: scale(0.98);
             box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
         }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .field-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 1px #ef4444 !important;
+        }
+
+        .field-success {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 1px #10b981 !important;
+        }
     </style>
 @endsection
 
@@ -81,7 +121,9 @@
         <!-- TRANSACTION FORM -->
         <div id="transactionForm" class="bg-white rounded-lg shadow-md p-6 mb-6">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold text-ayur-brown-800" id="formTitle">Record Financial Transaction</h3>
+                @php $isEdit = isset($editTransaction); @endphp
+                <h3 class="text-xl font-semibold text-ayur-brown-800" id="formTitle">
+                    {{ $isEdit ? 'Edit Financial Transaction' : 'Record Financial Transaction' }}</h3>
                 <div class="flex space-x-2">
                     <span id="receiptBtn"
                         class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-ayur-green-100 text-ayur-green-800 cursor-pointer">
@@ -94,10 +136,16 @@
                 </div>
             </div>
 
-            <form id="cashInOutForm" method="POST" enctype="multipart/form-data">
+            <form id="cashInOutForm" method="POST"
+                action="{{ $isEdit ? route('accounting.update', $editTransaction->id) : route('accounting.store') }}"
+                enctype="multipart/form-data" novalidate>
                 @csrf
-                <input type="hidden" id="transactionId" name="transaction_id">
-                <input type="hidden" id="isEdit" name="is_edit" value="0">
+                @if ($isEdit)
+                    @method('PATCH')
+                @endif
+                <input type="hidden" id="transactionId" name="transaction_id"
+                    value="{{ $isEdit ? $editTransaction->transaction_id : '' }}">
+                <input type="hidden" id="isEdit" name="is_edit" value="{{ $isEdit ? '1' : '0' }}">
 
                 <div class="grid md:grid-cols-2 gap-6">
                     <!-- COLUMN 1 -->
@@ -107,15 +155,16 @@
                             <div class="mt-1">
                                 <div class="flex space-x-2">
                                     <button type="button" id="receiptTypeBtn"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-ayur-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500 flex-1 justify-center transaction-type-btn active">
+                                        class="inline-flex items-center px-4 py-2 border {{ !$isEdit || ($isEdit && $editTransaction->transaction_type == 0) ? 'border-transparent text-white bg-ayur-green-600' : 'border-gray-300 text-ayur-brown-700 bg-white hover:bg-gray-50' }} text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500 flex-1 justify-center transaction-type-btn {{ !$isEdit || ($isEdit && $editTransaction->transaction_type == 0) ? 'active' : '' }}">
                                         <i class="fa-solid fa-arrow-down mr-2"></i> Receipt
                                     </button>
                                     <button type="button" id="paymentTypeBtn"
-                                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-ayur-brown-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500 flex-1 justify-center transaction-type-btn">
+                                        class="inline-flex items-center px-4 py-2 border {{ $isEdit && $editTransaction->transaction_type == 1 ? 'border-transparent text-white bg-ayur-green-600' : 'border-gray-300 text-ayur-brown-700 bg-white hover:bg-gray-50' }} text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500 flex-1 justify-center transaction-type-btn {{ $isEdit && $editTransaction->transaction_type == 1 ? 'active' : '' }}">
                                         <i class="fa-solid fa-arrow-up mr-2"></i> Payment
                                     </button>
                                 </div>
-                                <input type="hidden" id="transactionType" name="transaction_type" value="0">
+                                <input type="hidden" id="transactionType" name="transaction_type"
+                                    value="{{ $isEdit ? $editTransaction->transaction_type : '0' }}">
                             </div>
                             @error('transaction_type')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -127,7 +176,8 @@
                                     class="text-red-500">*</span></label>
                             <input type="date" name="transaction_date" id="transactionDate"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
-                                value="{{ date('Y-m-d') }}">
+                                value="{{ old('transaction_date', $isEdit ? $editTransaction->transaction_date->format('Y-m-d') : date('Y-m-d')) }}"
+                                required>
                             @error('transaction_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -138,11 +188,14 @@
                             <div class="mt-1 flex">
                                 <input type="text" id="displayTransactionId" disabled
                                     class="block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm p-2 border"
-                                    placeholder="Auto generated">
-                                <button type="button" id="refreshTransactionId"
-                                    class="ml-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-ayur-green-600 hover:bg-ayur-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500">
-                                    <i class="fa-solid fa-rotate"></i>
-                                </button>
+                                    placeholder="Auto generated"
+                                    value="{{ $isEdit ? $editTransaction->transaction_id : '' }}">
+                                @if (!$isEdit)
+                                    <button type="button" id="refreshTransactionId"
+                                        class="ml-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-ayur-green-600 hover:bg-ayur-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500">
+                                        <i class="fa-solid fa-rotate"></i>
+                                    </button>
+                                @endif
                             </div>
                         </div>
 
@@ -150,10 +203,13 @@
                             <label class="block text-sm font-medium text-ayur-brown-700">Transaction Category <span
                                     class="text-red-500">*</span></label>
                             <select name="category_id" id="categoryId"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border">
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
+                                required>
                                 <option value="">Select Category</option>
                                 @foreach ($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    <option value="{{ $category->id }}"
+                                        {{ old('category_id', $isEdit ? $editTransaction->category_id : '') == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}</option>
                                 @endforeach
                             </select>
                             @error('category_id')
@@ -170,7 +226,8 @@
                                 </div>
                                 <input type="number" name="amount" id="amount" step="0.01" min="0.01"
                                     class="block w-full pl-7 pr-12 border-gray-300 rounded-md focus:ring-ayur-green-500 focus:border-ayur-green-500 p-2 border"
-                                    placeholder="0.00">
+                                    placeholder="0.00" value="{{ old('amount', $isEdit ? $editTransaction->amount : '') }}"
+                                    required>
                                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-sm">INR</span>
                                 </div>
@@ -187,34 +244,37 @@
                             <div class="mt-1 grid grid-cols-3 gap-2">
                                 @foreach ($paymentModes as $mode)
                                     <label
-                                        class="flex items-center justify-center bg-ayur-offwhite px-3 py-2 rounded-md border border-gray-300 cursor-pointer hover:bg-ayur-green-50 payment-mode-option text-ayur-brown-700"
+                                        class="flex items-center justify-center px-3 py-2 rounded-md border cursor-pointer hover:bg-ayur-green-50 payment-mode-option 
+                                        {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'bg-ayur-green-600 border-ayur-green-500 text-white active' : 'bg-ayur-offwhite border-gray-300 text-ayur-brown-700' }}"
                                         data-value="{{ $mode->id }}">
                                         <input type="radio" name="payment_mode" value="{{ $mode->id }}"
-                                            class="hidden">
+                                            class="hidden"
+                                            {{ old('payment_mode', $isEdit ? $editTransaction->payment_mode : '') == $mode->id ? 'checked' : '' }}>
                                         <div class="flex flex-col items-center">
                                             @if ($mode->code === 'CASH')
                                                 <i
-                                                    class="fa-solid fa-money-bill-wave text-ayur-green-600 mb-1 payment-mode-icon"></i>
+                                                    class="fa-solid fa-money-bill-wave {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : 'text-ayur-green-600' }} mb-1 payment-mode-icon"></i>
                                             @elseif($mode->code === 'CARD')
                                                 <i
-                                                    class="fa-solid fa-credit-card text-ayur-green-600 mb-1 payment-mode-icon"></i>
+                                                    class="fa-solid fa-credit-card {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : 'text-ayur-green-600' }} mb-1 payment-mode-icon"></i>
                                             @elseif($mode->code === 'BANK')
                                                 <i
-                                                    class="fa-solid fa-building-columns text-ayur-green-600 mb-1 payment-mode-icon"></i>
+                                                    class="fa-solid fa-building-columns {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : 'text-ayur-green-600' }} mb-1 payment-mode-icon"></i>
                                             @elseif($mode->code === 'UPI')
                                                 <i
-                                                    class="fa-solid fa-mobile-screen text-ayur-green-600 mb-1 payment-mode-icon"></i>
+                                                    class="fa-solid fa-mobile-screen {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : 'text-ayur-green-600' }} mb-1 payment-mode-icon"></i>
                                             @elseif($mode->code === 'WALLET')
                                                 <i
-                                                    class="fa-solid fa-wallet text-ayur-green-600 mb-1 payment-mode-icon"></i>
+                                                    class="fa-solid fa-wallet {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : 'text-ayur-green-600' }} mb-1 payment-mode-icon"></i>
                                             @elseif($mode->code === 'CHEQUE')
                                                 <i
-                                                    class="fa-solid fa-money-check text-ayur-green-600 mb-1 payment-mode-icon"></i>
+                                                    class="fa-solid fa-money-check {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : 'text-ayur-green-600' }} mb-1 payment-mode-icon"></i>
                                             @else
                                                 <i
-                                                    class="fa-solid fa-ellipsis text-ayur-green-600 mb-1 payment-mode-icon"></i>
+                                                    class="fa-solid fa-ellipsis {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : 'text-ayur-green-600' }} mb-1 payment-mode-icon"></i>
                                             @endif
-                                            <span class="text-sm payment-mode-text">{{ $mode->name }}</span>
+                                            <span
+                                                class="text-sm payment-mode-text {{ $isEdit && $editTransaction->payment_mode == $mode->id ? 'text-white' : '' }}">{{ $mode->name }}</span>
                                         </div>
                                     </label>
                                 @endforeach
@@ -225,10 +285,16 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-ayur-brown-700">Reference Number</label>
+                            <label class="block text-sm font-medium text-ayur-brown-700">Reference Number <span
+                                    class="text-red-500">*</span></label>
                             <input type="text" name="reference_number" id="referenceNumber"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
-                                placeholder="Cheque/UPI/Transaction ID">
+                                placeholder="Cheque/UPI/Transaction ID"
+                                value="{{ old('reference_number', $isEdit ? $editTransaction->reference_number : '') }}"
+                                required>
+                            @error('reference_number')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
@@ -236,7 +302,9 @@
                                     class="text-red-500">*</span></label>
                             <input type="text" name="patient_vendor" id="patientVendor"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
-                                placeholder="Search patient or vendor">
+                                placeholder="Search patient or vendor"
+                                value="{{ old('patient_vendor', $isEdit ? $editTransaction->patient_vendor : '') }}"
+                                required>
                             @error('patient_vendor')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -247,14 +315,32 @@
                                     class="text-red-500">*</span></label>
                             <textarea name="notes" id="notes"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
-                                rows="3" placeholder="Add any additional information about this transaction"></textarea>
+                                rows="3" placeholder="Add any additional information about this transaction" required>{{ old('notes', $isEdit ? $editTransaction->notes : '') }}</textarea>
                             @error('notes')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-ayur-brown-700">Attach Receipt/Invoice </label>
+                            <label class="block text-sm font-medium text-ayur-brown-700">Attach Receipt/Invoice <span
+                                    class="text-red-500">*</span></label>
+
+                            @if ($isEdit && $editTransaction->attachment)
+                                <!-- Show existing attachment in edit mode -->
+                                <div class="mt-2 mb-2">
+                                    <div class="flex items-center p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                        <i class="fa-solid fa-paperclip text-blue-600 mr-2"></i>
+                                        <span class="text-sm text-blue-700">Current attachment: </span>
+                                        <a href="{{ asset($editTransaction->attachment) }}" target="_blank"
+                                            class="text-sm text-blue-600 hover:text-blue-800 underline ml-1">
+                                            {{ basename($editTransaction->attachment) }}
+                                        </a>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Upload a new file to replace the current
+                                        attachment</p>
+                                </div>
+                            @endif
+
                             <div
                                 class="mt-1 flex justify-center px-6 pt-3 pb-3 border-2 border-gray-300 border-dashed rounded-md file-upload-container">
                                 <div class="space-y-1 text-center">
@@ -262,9 +348,9 @@
                                     <div class="flex text-sm text-gray-600">
                                         <label
                                             class="relative cursor-pointer bg-white rounded-md font-medium text-ayur-green-600 hover:text-ayur-green-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-ayur-green-500">
-                                            <span>Upload a file</span>
+                                            <span>{{ $isEdit ? 'Upload new file' : 'Upload a file' }}</span>
                                             <input id="attachment" name="attachment" type="file" class="sr-only"
-                                                accept=".pdf,.jpg,.jpeg,.png">
+                                                accept=".pdf,.jpg,.jpeg,.png" required>
                                         </label>
                                         <p class="pl-1">or drag and drop</p>
                                     </div>
@@ -290,13 +376,20 @@
                 </div>
 
                 <div class="mt-8 flex justify-end space-x-3">
-                    <button type="button" id="clearFormBtn"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-ayur-brown-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500">
-                        Clear Form
-                    </button>
+                    @if ($isEdit)
+                        <a href="{{ route('accounting') }}"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-ayur-brown-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500">
+                            Cancel
+                        </a>
+                    @else
+                        <button type="button" id="clearFormBtn"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-ayur-brown-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500">
+                            Clear Form
+                        </button>
+                    @endif
                     <button type="submit" id="submitBtn"
                         class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-ayur-green-600 hover:bg-ayur-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ayur-green-500">
-                        Save Transaction
+                        {{ $isEdit ? 'Update Transaction' : 'Save Transaction' }}
                     </button>
                 </div>
             </form>
@@ -440,14 +533,25 @@
                                         onclick="viewTransaction({{ $transaction->id }})">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
-                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"
-                                        onclick="editTransaction({{ $transaction->id }})">
+
+                                    {{-- edit button --}}
+                                    <a href="{{ route('accounting.edit', $transaction->id) }}"
+                                        class="text-stone-600 hover:text-stone-900 mr-2" title="Edit">
                                         <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                    <button class="text-red-600 hover:text-red-900"
-                                        onclick="deleteTransaction({{ $transaction->id }})">
+                                    </a>
+
+                                    {{-- delete button --}}
+                                    <button type="button" class="delete-transaction-btn text-red-600 hover:text-red-900"
+                                        data-id="{{ $transaction->id }}" title="Delete">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
+                                    <form id="delete-transaction-form-{{ $transaction->id }}"
+                                        action="{{ route('accounting.delete', $transaction->id) }}" method="post"
+                                        style="display:none;">
+                                        @csrf
+                                        @method('delete')
+                                    </form>
+
                                 </td>
                             </tr>
                         @empty
@@ -463,58 +567,11 @@
         </div>
     </main>
 
-    <!-- Edit Transaction Modal -->
-    <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-y-auto">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-ayur-brown-800">Edit Transaction</h3>
-                        <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600">
-                            <i class="fa-solid fa-times text-xl"></i>
-                        </button>
-                    </div>
-                    <div id="editFormContent">
-                        <!-- Edit form will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-                <div class="p-6">
-                    <div class="flex items-center mb-4">
-                        <div
-                            class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                            <i class="fa-solid fa-exclamation-triangle text-red-600"></i>
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">Delete Transaction</h3>
-                        <p class="text-sm text-gray-500 mb-6">Are you sure you want to delete this transaction? This action
-                            cannot be undone.</p>
-                        <div class="flex justify-center space-x-3">
-                            <button onclick="closeDeleteModal()"
-                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                                Cancel
-                            </button>
-                            <button id="confirmDeleteBtn"
-                                class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700">
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @section('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let currentTransactionId = null;
 
@@ -522,16 +579,66 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeForm();
             initializeEventListeners();
-            generateTransactionId();
+            @if (!$isEdit)
+                generateTransactionId();
+            @endif
 
             // Check for existing Laravel validation errors and display them
             checkForLaravelErrors();
+
+            // Confirm delete helper using fetch to send DELETE
+            document.querySelectorAll('.delete-transaction-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const url = document.getElementById('delete-transaction-form-' + id).action;
+                    Swal.fire({
+                        text: 'Are you sure you want to delete this Transaction?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, delete!',
+                        cancelButtonText: 'No, cancel'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                },
+                                body: JSON.stringify({
+                                    _method: 'DELETE'
+                                })
+                            }).then(res => {
+                                if (res.ok) {
+                                    Swal.fire({
+                                        text: 'Transaction deleted successfully!',
+                                        icon: 'success'
+                                    }).then(() => location.reload());
+                                } else {
+                                    throw new Error('Failed');
+                                }
+                            }).catch(() => {
+                                Swal.fire({
+                                    text: 'Something went wrong!',
+                                    icon: 'error'
+                                });
+                            });
+                        }
+                    });
+                });
+            });
         });
 
         function initializeForm() {
-            // Set default transaction type
-            document.getElementById('transactionType').value = '0';
-            updateTransactionTypeButtons(0);
+            // Set transaction type based on edit mode or default
+            @if ($isEdit)
+                const transactionType = {{ $editTransaction->transaction_type }};
+                document.getElementById('transactionType').value = transactionType;
+                updateTransactionTypeButtons(transactionType);
+            @else
+                document.getElementById('transactionType').value = '0';
+                updateTransactionTypeButtons(0);
+            @endif
         }
 
         function initializeEventListeners() {
@@ -539,14 +646,42 @@
             document.getElementById('receiptTypeBtn').addEventListener('click', () => setTransactionType(0));
             document.getElementById('paymentTypeBtn').addEventListener('click', () => setTransactionType(1));
 
-            // Form submission
-            document.getElementById('cashInOutForm').addEventListener('submit', handleFormSubmit);
+            // Form submission with validation
+            document.getElementById('cashInOutForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (validateForm()) {
+                    // If validation passes, submit the form
+                    this.submit();
+                } else {
+                    // Show error message
+                    // showValidationMessage('Please fill in all required fields correctly.', 'error');
+                    // Scroll to first error field
+                    const firstError = document.querySelector('.border-red-500');
+                    if (firstError) {
+                        firstError.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                        firstError.focus();
+                    }
+                }
+            });
 
-            // Clear form button
-            document.getElementById('clearFormBtn').addEventListener('click', clearForm);
+            // Clear form button (only in create mode)
+            @if (!$isEdit)
+                const clearFormBtn = document.getElementById('clearFormBtn');
+                if (clearFormBtn) {
+                    clearFormBtn.addEventListener('click', clearForm);
+                }
+            @endif
 
-            // Refresh transaction ID button
-            document.getElementById('refreshTransactionId').addEventListener('click', generateTransactionId);
+            // Refresh transaction ID button (only in create mode)
+            @if (!$isEdit)
+                const refreshBtn = document.getElementById('refreshTransactionId');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', generateTransactionId);
+                }
+            @endif
 
             // Search functionality - only if searchInput exists
             const searchInput = document.getElementById('searchInput');
@@ -602,221 +737,9 @@
             document.getElementById('transactionId').value = transactionId;
         }
 
-        function handleFormSubmit(e) {
-            e.preventDefault();
+        // Form submission is handled by standard HTML form action
 
-            // Validate form before submission
-            if (!validateForm()) {
-                return false;
-            }
-
-            const formData = new FormData(e.target);
-            const isEdit = document.getElementById('isEdit').value === '1';
-
-            if (isEdit) {
-                // Update existing transaction
-                updateTransaction(formData);
-            } else {
-                // Create new transaction
-                createTransaction(formData);
-            }
-        }
-
-        function createTransaction(formData) {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-                document.querySelector('input[name="_token"]')?.value;
-
-            fetch('{{ route('accounting.store') }}', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json();
-                    } else {
-                        // If response is not JSON, reload the page (success case)
-                        window.location.reload();
-                        return null;
-                    }
-                })
-                .then(data => {
-                    if (data && data.success) {
-                        window.location.reload();
-                    } else if (data && data.message) {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while saving the transaction');
-                });
-        }
-
-        function updateTransaction(formData) {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-                document.querySelector('input[name="_token"]')?.value;
-
-            fetch(`{{ route('accounting.index') }}/${currentTransactionId}`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'X-HTTP-Method-Override': 'PUT'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json();
-                    } else {
-                        // If response is not JSON, reload the page (success case)
-                        window.location.reload();
-                        return null;
-                    }
-                })
-                .then(data => {
-                    if (data && data.success) {
-                        window.location.reload();
-                    } else if (data && data.message) {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while updating the transaction');
-                });
-        }
-
-        function editTransaction(id) {
-            currentTransactionId = id;
-
-            fetch(`{{ route('accounting.index') }}/${id}/edit`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json();
-                    } else {
-                        throw new Error('Response is not JSON');
-                    }
-                })
-                .then(data => {
-                    if (data && data.transaction) {
-                        populateEditForm(data.transaction);
-                        document.getElementById('editModal').classList.remove('hidden');
-                    } else {
-                        alert('Invalid response format');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while loading the transaction');
-                });
-        }
-
-        function populateEditForm(transaction) {
-            // Populate the main form with transaction data
-            document.getElementById('transactionType').value = transaction.transaction_type;
-            document.getElementById('transactionDate').value = transaction.transaction_date;
-            document.getElementById('categoryId').value = transaction.category_id;
-            document.getElementById('amount').value = transaction.amount;
-            document.getElementById('referenceNumber').value = transaction.reference_number || '';
-            document.getElementById('patientVendor').value = transaction.patient_vendor || '';
-            document.getElementById('notes').value = transaction.notes || '';
-
-            // Update payment mode selection
-            updatePaymentModeSelection(transaction.payment_mode);
-
-            // Update form for edit mode
-            document.getElementById('isEdit').value = '1';
-            document.getElementById('formTitle').textContent = 'Edit Financial Transaction';
-            document.getElementById('submitBtn').textContent = 'Update Transaction';
-
-            // Update transaction type buttons
-            updateTransactionTypeButtons(transaction.transaction_type);
-
-            // Trigger validation for all fields
-            setTimeout(() => {
-                validateField('transactionDate');
-                validateField('categoryId');
-                validateField('amount');
-                validateField('referenceNumber');
-                validateField('patientVendor');
-                validateField('notes');
-                validateField('attachment');
-                validatePaymentMode();
-            }, 100);
-
-            // Scroll to form
-            document.getElementById('transactionForm').scrollIntoView({
-                behavior: 'smooth'
-            });
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-        }
-
-        function deleteTransaction(id) {
-            currentTransactionId = id;
-            document.getElementById('deleteModal').classList.remove('hidden');
-
-            document.getElementById('confirmDeleteBtn').onclick = function() {
-                performDelete(id);
-            };
-        }
-
-        function performDelete(id) {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-                document.querySelector('input[name="_token"]')?.value;
-
-            fetch(`{{ route('accounting.index') }}/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json();
-                    } else {
-                        // If response is not JSON, reload the page (success case)
-                        window.location.reload();
-                        return null;
-                    }
-                })
-                .then(data => {
-                    if (data && data.success) {
-                        window.location.reload();
-                    } else if (data && data.message) {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the transaction');
-                });
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-        }
+        // Edit and delete are handled by direct links and SweetAlert confirmations
 
         function initializePaymentModeSelection() {
             // Add click event listeners to all payment mode options
@@ -1016,9 +939,11 @@
                 'amount',
                 'referenceNumber',
                 'patientVendor',
-                'notes',
-                'attachment'
+                'notes'
             ];
+
+            // Clear any previous validation messages
+            clearValidationMessage();
 
             // Validate all required fields
             requiredFields.forEach(fieldId => {
@@ -1032,13 +957,12 @@
                 isValid = false;
             }
 
-            // Show error message if form is invalid
-            if (!isValid) {
-                // showValidationMessage('Please fill in all required fields correctly.', 'error');
-                return false;
+            // Validate attachment (always required)
+            if (!validateField('attachment')) {
+                isValid = false;
             }
 
-            return true;
+            return isValid;
         }
 
         function validateField(fieldId) {
@@ -1107,20 +1031,15 @@
                     if (!value) {
                         isValid = false;
                         errorMessage = 'Notes/Description is required';
-                    } else if (value.length < 10) {
-                        isValid = false;
-                        errorMessage = 'Notes must be at least 10 characters';
                     }
                     break;
 
                 case 'attachment':
-                    if (!value) {
-                        isValid = false;
-                        errorMessage = 'Please attach a receipt or invoice';
-                    } else {
-                        // Validate file type and size
-                        const file = field.files[0];
+                    const file = field.files[0];
+                    @if ($isEdit && isset($editTransaction) && $editTransaction->attachment)
+                        // For edit mode with existing attachment, only validate if new file is uploaded
                         if (file) {
+                            // Validate file type and size
                             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
                             const maxSize = 5 * 1024 * 1024; // 5MB
 
@@ -1132,16 +1051,43 @@
                                 errorMessage = 'File size must be less than 5MB';
                             }
                         }
-                    }
+                        // If no new file and existing attachment, it's valid
+                    @else
+                        // For new entries or edit without existing attachment, file is required
+                        if (!file) {
+                            isValid = false;
+                            errorMessage = 'Please attach a receipt or invoice';
+                        } else {
+                            // Validate file type and size
+                            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+                            const maxSize = 5 * 1024 * 1024; // 5MB
+
+                            if (!allowedTypes.includes(file.type)) {
+                                isValid = false;
+                                errorMessage = 'Please upload only PDF, JPG, or PNG files';
+                            } else if (file.size > maxSize) {
+                                isValid = false;
+                                errorMessage = 'File size must be less than 5MB';
+                            }
+                        }
+                    @endif
                     break;
             }
 
             if (isValid) {
                 // Add success state
-                addFieldSuccess(field);
+                if (fieldId === 'attachment') {
+                    addFileUploadSuccess();
+                } else {
+                    addFieldSuccess(field);
+                }
             } else {
                 // Add error state
-                addFieldError(field, errorMessage);
+                if (fieldId === 'attachment') {
+                    addFileUploadError(errorMessage);
+                } else {
+                    addFieldError(field, errorMessage);
+                }
             }
 
             return isValid;
@@ -1164,10 +1110,12 @@
         }
 
         function addFieldError(field, message) {
-            field.classList.remove('border-gray-300', 'border-ayur-green-500', 'focus:border-ayur-green-500');
+            field.classList.remove('border-gray-300', 'border-ayur-green-500', 'focus:border-ayur-green-500',
+                'focus:ring-ayur-green-200');
             field.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-200');
 
-            // Add error message
+
+            // Add error message without icon
             const errorDiv = document.createElement('div');
             errorDiv.className = 'mt-1 text-sm text-red-600 validation-error';
             errorDiv.textContent = message;
@@ -1226,9 +1174,7 @@
 
         function clearValidationStates() {
             // Clear all field validation states
-            const fields = ['transactionDate', 'categoryId', 'amount', 'referenceNumber', 'patientVendor', 'notes',
-                'attachment'
-            ];
+            const fields = ['transactionDate', 'categoryId', 'amount', 'referenceNumber', 'patientVendor', 'notes'];
             fields.forEach(fieldId => {
                 const field = document.getElementById(fieldId);
                 if (field) {
@@ -1238,6 +1184,9 @@
 
             // Clear payment mode validation
             removePaymentModeError();
+
+            // Clear file upload validation
+            removeFileUploadError();
         }
 
         function showValidationMessage(message, type) {
@@ -1261,6 +1210,13 @@
                     messageDiv.remove();
                 }
             }, 5000);
+        }
+
+        function clearValidationMessage() {
+            const messageDiv = document.getElementById('validationMessage');
+            if (messageDiv) {
+                messageDiv.remove();
+            }
         }
 
         function checkForLaravelErrors() {
@@ -1305,11 +1261,59 @@
             fileInfo.classList.add('hidden');
 
             // Reset upload container styling
-            uploadContainer.classList.remove('border-green-500', 'bg-green-50');
+            uploadContainer.classList.remove('border-green-500', 'bg-green-50', 'border-red-500', 'bg-red-50');
             uploadContainer.classList.add('border-gray-300');
+
+            // Remove any existing error messages
+            removeFileUploadError();
 
             // Validate the field
             validateField('attachment');
+        }
+
+        function addFileUploadError(message) {
+            const uploadContainer = document.querySelector('.file-upload-container');
+            const fileUploadDiv = uploadContainer.closest('div');
+
+            // Remove existing error first
+            removeFileUploadError();
+
+            // Style the upload container
+            uploadContainer.classList.remove('border-gray-300', 'border-green-500', 'bg-green-50');
+            uploadContainer.classList.add('border-red-500', 'bg-red-50');
+
+
+            // Add error message
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'mt-1 text-sm text-red-600 file-upload-error';
+            errorDiv.textContent = message;
+            fileUploadDiv.appendChild(errorDiv);
+        }
+
+        function addFileUploadSuccess() {
+            const uploadContainer = document.querySelector('.file-upload-container');
+
+            // Remove any existing errors
+            removeFileUploadError();
+
+            // Style the upload container
+            uploadContainer.classList.remove('border-gray-300', 'border-red-500', 'bg-red-50');
+            uploadContainer.classList.add('border-green-500', 'bg-green-50');
+
+        }
+
+        function removeFileUploadError() {
+            const uploadContainer = document.querySelector('.file-upload-container');
+            const fileUploadDiv = uploadContainer.closest('div');
+            const errorDiv = fileUploadDiv.querySelector('.file-upload-error');
+
+            if (errorDiv) {
+                errorDiv.remove();
+            }
+
+            // Reset container styling
+            uploadContainer.classList.remove('border-red-500', 'bg-red-50');
+            uploadContainer.classList.add('border-gray-300');
         }
     </script>
 @endsection

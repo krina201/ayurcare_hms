@@ -29,6 +29,7 @@
                     <button class="py-2 px-4 border-b-2 border-ayur-green-500 text-ayur-green-600 font-medium">
                         Medicine Inventory
                     </button>
+
                     <a href="{{ route('pharmacy.dispense') }}"
                         class="btn py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Dispense Medication
@@ -264,7 +265,8 @@
                                         // Check if expiring soon (within 30 days)
                                         elseif (
                                             $medicine->expiry_date &&
-                                            $medicine->expiry_date->diffInDays(now()) <= 30 &&
+                                            $medicine->expiry_date->isFuture() &&
+                                            now()->diffInDays($medicine->expiry_date) <= 30 &&
                                             $medicine->track_expiry
                                         ) {
                                             $status = 'Expiring Soon';
@@ -659,7 +661,7 @@
                                 </div>
                                 <div>
                                     <h4 class="text-sm font-medium text-ayur-brown-800">{{ $item->name }}</h4>
-                                    <p class="text-xs text-red-600">Expires in {{ $item->expiry_date->diffInDays(now()) }}
+                                    <p class="text-xs text-red-600">Expires in {{ now()->diffInDays($item->expiry_date) }}
                                         days</p>
                                 </div>
                             </div>

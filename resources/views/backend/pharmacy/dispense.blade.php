@@ -2,18 +2,16 @@
 
 @section('content')
     <!-- MAIN CONTENT -->
-    <!-- MAIN CONTENT -->
     <main class="p-4">
         <!-- TABS -->
         <div id="pharmacyTabs" class="mb-6">
             <div class="border-b border-gray-200">
                 <nav class="flex -mb-px">
-                    <button
-                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
-                        Medicine Inventory
-                    </button>
-                    <a
+                    <a href="{{ route('pharmacy') }}"
                         class="btn py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
+                        Medicine Inventory
+                    </a>
+                    <a class="py-2 px-4 border-b-2 border-ayur-green-500 text-ayur-green-600 font-medium">
                         Dispense Medication
                     </a>
 
@@ -106,9 +104,7 @@
                         </div>
                         <div id="patientCards" class="space-y-3 patientCard">
                             <div class="flex items-start">
-                                <img class="h-12 w-12 rounded-full"
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                    alt="Patient avatar">
+
                                 <div class="ml-3">
                                     <h4 class="text-sm font-medium text-ayur-brown-800">Select a patient</h4>
                                     <p class="text-xs text-ayur-brown-600">Search by UHID, name, or mobile</p>
@@ -403,7 +399,8 @@
                                         // Check if expiring soon (within 30 days)
                                         elseif (
                                             $medicine->expiry_date &&
-                                            $medicine->expiry_date->diffInDays(now()) <= 30 &&
+                                            $medicine->expiry_date->isFuture() &&
+                                            now()->diffInDays($medicine->expiry_date) <= 30 &&
                                             $medicine->track_expiry
                                         ) {
                                             $status = 'Expiring Soon';
@@ -451,15 +448,16 @@
 
         <!-- RECENT DISPENSATIONS -->
         <div id="recentDispensations" class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-ayur-brown-800">Recent Dispensations</h3>
-                <button class="text-ayur-green-600 hover:text-ayur-green-700 text-sm font-medium">
+                <a href="{{ route('pharmacy.dispensations') }}"
+                    class="text-ayur-green-600 hover:text-ayur-green-700 text-sm font-medium transition-colors duration-200">
                     View All <i class="fa-solid fa-arrow-right ml-1"></i>
-                </button>
+                </a>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                <table class="min-w-full divide-y divide-gray-200" id="example2">
                     <thead class="bg-ayur-offwhite">
                         <tr>
                             <th scope="col"
@@ -486,84 +484,64 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">RX-2025-0128</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-8 w-8">
-                                        <img class="h-8 w-8 rounded-full"
-                                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-                                            alt="">
+                        @forelse($recentDispensations as $dispense)
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">
+                                    {{ $dispense->receipt_number }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-8 w-8">
+                                            <img class="h-8 w-8 rounded-full"
+                                                src="{{ $dispense->patient && $dispense->patient->photo_path ? asset($dispense->patient->photo_path) : asset('backend-assets/media/uploads/download (3).png') }}"
+                                                onerror="this.onerror=null; this.src='{{ asset('backend-assets/media/uploads/download (3).png') }}';"
+                                                alt="Patient avatar">
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-ayur-brown-800">
+                                                {{ $dispense->patient ? $dispense->patient->full_name : 'N/A' }}
+                                            </div>
+                                            <div class="text-xs text-ayur-brown-600">
+                                                {{ $dispense->patient ? $dispense->patient->uhid : 'N/A' }}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-ayur-brown-800">Rajesh Kumar</div>
-                                        <div class="text-xs text-ayur-brown-600">AYR-2025-0040</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                    {{ $dispense->prescription && $dispense->prescription->doctor ? $dispense->prescription->doctor->name : 'N/A' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                    {{ $dispense->dispense_date ? $dispense->dispense_date->format('d/m/Y') : 'N/A' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                    {{ $dispense->items ? $dispense->items->count() : 0 }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-ayur-brown-800">
+                                    ₹{{ number_format($dispense->total_amount, 2) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"
+                                        title="View Details">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"
+                                        title="Print Receipt">
+                                        <i class="fa-solid fa-print"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                                    <div class="flex flex-col items-center">
+                                        <i class="fa-solid fa-prescription-bottle-medical text-4xl text-gray-300 mb-2"></i>
+                                        <p class="text-sm">No dispensations found</p>
+                                        <p class="text-xs text-gray-400">Dispensations will appear here once medicines are
+                                            dispensed</p>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Dr. Gupta</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">16/07/2025</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">5</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-ayur-brown-800">₹1,450</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"><i
-                                        class="fa-solid fa-eye"></i></button>
-                                <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"><i
-                                        class="fa-solid fa-print"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">RX-2025-0127</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-8 w-8">
-                                        <img class="h-8 w-8 rounded-full"
-                                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg"
-                                            alt="">
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-ayur-brown-800">Meera Patel</div>
-                                        <div class="text-xs text-ayur-brown-600">AYR-2025-0039</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Dr. Sharma</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">16/07/2025</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">3</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-ayur-brown-800">₹850</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"><i
-                                        class="fa-solid fa-eye"></i></button>
-                                <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"><i
-                                        class="fa-solid fa-print"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">RX-2025-0126</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-8 w-8">
-                                        <img class="h-8 w-8 rounded-full"
-                                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
-                                            alt="">
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-ayur-brown-800">Arjun Desai</div>
-                                        <div class="text-xs text-ayur-brown-600">AYR-2025-0038</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Dr. Patel</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">15/07/2025</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">4</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-ayur-brown-800">₹1,280</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"><i
-                                        class="fa-solid fa-eye"></i></button>
-                                <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"><i
-                                        class="fa-solid fa-print"></i></button>
-                            </td>
-                        </tr>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -742,6 +720,5 @@
             });
         });
     </script>
-    <script src="{{ asset('backend-assets/js/dispense.js') }}" onerror="console.error('Failed to load dispense.js')">
-    </script>
+    <script src="{{ asset('backend-assets/js/validation/dispense/dispense.js') }}"></script>
 @endsection

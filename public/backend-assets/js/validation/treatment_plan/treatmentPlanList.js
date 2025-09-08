@@ -4,9 +4,13 @@ $(document).ready(function () {
     let consentFile = null;
     let dayWiseSchedule = [];
     let searchTimeout;
+    let validationRules = {};
+    let validationErrors = {};
 
     // Initialize the form
     initializeForm();
+    initializeValidation();
+    initializeEditMode();
 
     // Patient selection tab functionality
     $('#selectTab').on('click', function () {
@@ -57,6 +61,9 @@ $(document).ready(function () {
             selectedPatient = null;
             $('#patientDisplay').empty();
             $('#patientId').val('');
+
+            // Clear validation for patient selection
+            updateFieldValidation('patient_id', false, 'Patient selection is required');
         }
     });
 
@@ -90,13 +97,59 @@ $(document).ready(function () {
 
     // Form submission
     $('#treatmentPlanForm').on('submit', function (e) {
-        e.preventDefault();
-        submitTreatmentPlan();
+        // Check if this is edit mode by looking for PATCH method input
+        const isEditMode = $('input[name="_method"][value="PATCH"]').length > 0;
+
+        if (isEditMode) {
+            // For edit mode, use regular form submission
+            // Just validate and let the form submit normally
+            if (!validateForm()) {
+                e.preventDefault();
+                return false;
+            }
+            // Let the form submit normally (don't prevent default)
+            return true;
+        } else {
+            // For create mode, use custom AJAX submission
+            e.preventDefault();
+
+            // Clear any existing validation errors first
+            clearValidationErrors();
+
+            // Add a small delay to ensure UI is ready
+            setTimeout(() => {
+                submitTreatmentPlan();
+            }, 100);
+        }
     });
 
     // Save as draft button
     $('.save-draft-btn').on('click', function () {
-        submitTreatmentPlan(true);
+        // Check if this is edit mode
+        const isEditMode = $('input[name="_method"][value="PATCH"]').length > 0;
+
+        if (isEditMode) {
+            // For edit mode, add draft flag and submit form normally
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'save_as_draft',
+                value: '1'
+            }).appendTo('#treatmentPlanForm');
+
+            // Validate and submit
+            if (validateForm()) {
+                $('#treatmentPlanForm').submit();
+            } else {
+                // Remove the draft flag if validation fails
+                $('input[name="save_as_draft"]').remove();
+            }
+        } else {
+            // For create mode, use existing logic
+            clearValidationErrors();
+            setTimeout(() => {
+                submitTreatmentPlan(true);
+            }, 100);
+        }
     });
 
     // Add more days button
@@ -110,27 +163,154 @@ $(document).ready(function () {
         addProcedureToDay(dayId);
     });
 
+    // Edit procedure
+    $(document).on('click', '.edit-procedure-btn', function () {
+        const dayNumber = parseInt($(this).data('day'));
+        const procedureIndex = parseInt($(this).data('procedure-index'));
+        showProcedureModal(dayNumber, procedureIndex);
+    });
+
     // Remove procedure
     $(document).on('click', '.remove-procedure-btn', function () {
-        $(this).closest('.procedure-card').remove();
+        const $card = $(this).closest('.procedure-card');
+        const dayNumber = parseInt($(this).closest('[id^="day"]').attr('id').replace('day', ''));
+        const procedureIndex = parseInt($(this).closest('.procedure-card').index());
+
+        // Remove from data structure
+        const day = dayWiseSchedule.find(d => d.day === dayNumber);
+        if (day && day.procedures[procedureIndex]) {
+            day.procedures.splice(procedureIndex, 1);
+        }
+
+        // Remove from display
+        $card.remove();
+    });
+
+    // Edit day date
+    $(document).on('change', '.day-date-input', function () {
+        const dayNumber = parseInt($(this).data('day'));
+        const newDate = $(this).val();
+
+        // Find the day in the schedule and update its date
+        const day = dayWiseSchedule.find(d => d.day === dayNumber);
+        if (day && newDate) {
+            // Validate date is not too far in the past or future
+            const selectedDate = new Date(newDate);
+            const today = new Date();
+            const oneYearFromNow = new Date();
+            oneYearFromNow.setFullYear(today.getFullYear() + 1);
+
+            if (selectedDate < today.setHours(0, 0, 0, 0)) {
+                showAlert('error', 'Date cannot be in the past');
+                $(this).val(day.date); // Revert to original date
+                return;
+            }
+
+            if (selectedDate > oneYearFromNow) {
+                showAlert('error', 'Date cannot be more than 1 year in the future');
+                $(this).val(day.date); // Revert to original date
+                return;
+            }
+
+            day.date = newDate;
+            console.log(`Updated Day ${dayNumber} date to: ${newDate}`);
+        }
     });
 
     // Remove day
     $(document).on('click', '.remove-day-btn', function () {
-        $(this).closest('[id^="day"]').remove();
+        const dayId = $(this).closest('[id^="day"]').attr('id');
+        const dayNumber = parseInt(dayId.replace('day', ''));
+        const day = dayWiseSchedule.find(d => d.day === dayNumber);
+
+        // Show confirmation dialog
+        Swal.fire({
+            title: 'Remove Day?',
+            text: `Are you sure you want to remove Day ${dayNumber}${day && day.procedures.length > 0 ? ` and its ${day.procedures.length} procedure(s)` : ''}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#6B7280',
+            confirmButtonText: 'Yes, remove it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Remove from data structure
+                const dayIndex = dayWiseSchedule.findIndex(d => d.day === dayNumber);
+                if (dayIndex !== -1) {
+                    dayWiseSchedule.splice(dayIndex, 1);
+                }
+
+                // Remove from display
+                $(this).closest('[id^="day"]').remove();
+
+                console.log(`Removed Day ${dayNumber} from schedule`);
+
+                Swal.fire({
+                    title: 'Removed!',
+                    text: `Day ${dayNumber} has been removed from the schedule.`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+        });
     });
 
     // Initialize form
     function initializeForm() {
-        // Set default dates
-        const today = new Date();
-        const endDate = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days from today
+        // Check if in edit mode
+        const isEditMode = $('input[name="_method"][value="PATCH"]').length > 0;
 
-        $('#startDate').val(today.toISOString().split('T')[0]);
-        $('#endDate').val(endDate.toISOString().split('T')[0]);
+        if (!isEditMode) {
+            // Set only start date to today for new forms, leave end date blank
+            const today = new Date();
+            $('#startDate').val(today.toISOString().split('T')[0]);
+            $('#endDate').val('');
+        }
 
-        // Initialize day-wise schedule
-        generateDayWiseSchedule();
+        // Don't initialize day-wise schedule until both dates are selected
+        // generateDayWiseSchedule();
+    }
+
+    // Initialize edit mode
+    function initializeEditMode() {
+        const isEditMode = $('input[name="_method"][value="PATCH"]').length > 0;
+
+        if (isEditMode) {
+            // Get the patient ID from the hidden input
+            const patientId = $('#patientId').val();
+
+            if (patientId) {
+                // Find the patient in the dropdown and select it
+                const $patientOption = $('#patientSelect option[value="' + patientId + '"]');
+                if ($patientOption.length) {
+                    $('#patientSelect').val(patientId);
+
+                    // Trigger the patient selection to populate the display
+                    const patientData = {
+                        id: patientId,
+                        uhid: $patientOption.data('uhid'),
+                        full_name: $patientOption.data('name'),
+                        gender: $patientOption.data('gender'),
+                        age: $patientOption.data('age'),
+                        mobile: $patientOption.data('mobile'),
+                        prakriti: $patientOption.data('prakriti'),
+                        allergies: $patientOption.data('allergies'),
+                        photo_path: $patientOption.data('photo')
+                    };
+
+                    selectPatientFromDropdown(patientData);
+                }
+            }
+
+            // Generate day-wise schedule if dates are available
+            const startDate = $('#startDate').val();
+            const endDate = $('#endDate').val();
+            if (startDate && endDate) {
+                generateDayWiseSchedule();
+            }
+        }
     }
 
     // Search patient
@@ -305,10 +485,11 @@ $(document).ready(function () {
         const patientDisplay = `
             <div class="bg-ayur-offwhite rounded-lg p-4">
                 <div class="flex items-center">
-                    <img class="h-16 w-16 rounded-full mr-4"
-                         src="${patient.photo_path ? '/storage/' + patient.photo_path : '/backend-assets/media/default-avatar.png'}"
-                         alt="Patient avatar"
-                         onerror="this.src='/backend-assets/media/default-avatar.png'">
+                
+                                         <img class="h-16 w-16 rounded-full mr-4 object-cover"
+                          src="${patient.photo_path ? '/' + patient.photo_path : '/backend-assets/media/uploads/download (3).png'}"
+                          alt="Patient avatar"
+                          onerror="this.src='/backend-assets/media/uploads/download (3).png'">
                     <div>
                         <h4 class="text-ayur-brown-800 font-medium">${patient.full_name}</h4>
                         <p class="text-sm text-ayur-brown-600">UHID: ${patient.uhid} | ${patient.age}/${patient.gender}</p>
@@ -322,6 +503,9 @@ $(document).ready(function () {
 
         $('#patientDisplay').html(patientDisplay);
         $('#patientId').val(patient.id);
+
+        // Trigger validation for patient selection
+        validateField('patient_id', patient.id);
     }
 
     // Update procedure options based on treatment category
@@ -353,24 +537,16 @@ $(document).ready(function () {
     function handleConsentFileUpload(input) {
         const file = input.files[0];
         if (file) {
-            // Validate file type and size
-            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-            const maxSize = 5 * 1024 * 1024; // 5MB
-
-            if (!allowedTypes.includes(file.type)) {
-                showAlert('error', 'Please select a valid file type (PDF, JPG, JPEG, PNG)');
-                input.value = '';
-                return;
+            // Use the validation system
+            if (validateConsentFile(input)) {
+                consentFile = file;
+                displayConsentPreview(file);
             }
-
-            if (file.size > maxSize) {
-                showAlert('error', 'File size must not exceed 5MB');
-                input.value = '';
-                return;
-            }
-
-            consentFile = file;
-            displayConsentPreview(file);
+        } else {
+            // Clear file if no file selected
+            consentFile = null;
+            $('#consentPreview').empty();
+            updateFieldValidation('consent_file', false, 'Consent file is required');
         }
     }
 
@@ -407,11 +583,29 @@ $(document).ready(function () {
 
     // Generate day-wise schedule
     function generateDayWiseSchedule() {
-        const startDate = new Date($('#startDate').val());
-        const endDate = new Date($('#endDate').val());
+        const startDateVal = $('#startDate').val();
+        const endDateVal = $('#endDate').val();
 
-        if (startDate && endDate) {
+        // Clear schedule if either date is missing
+        if (!startDateVal || !endDateVal) {
+            dayWiseSchedule = [];
+            $('#dayWiseSchedule').empty();
+            return;
+        }
+
+        const startDate = new Date(startDateVal);
+        const endDate = new Date(endDateVal);
+
+        // Validate dates are valid
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            dayWiseSchedule = [];
+            $('#dayWiseSchedule').empty();
+            return;
+        }
+
+        if (startDate && endDate && endDate >= startDate) {
             const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
             dayWiseSchedule = [];
 
             for (let i = 1; i <= days; i++) {
@@ -426,6 +620,10 @@ $(document).ready(function () {
             }
 
             updateDayWiseDisplay();
+        } else {
+            // Clear schedule if dates are invalid
+            dayWiseSchedule = [];
+            $('#dayWiseSchedule').empty();
         }
     }
 
@@ -434,28 +632,51 @@ $(document).ready(function () {
         const container = $('#dayWiseSchedule');
         container.empty();
 
+        if (dayWiseSchedule.length === 0) {
+            return;
+        }
+
         dayWiseSchedule.forEach((day, index) => {
             const dayHtml = `
-                <div id="day${day.day}" class="bg-ayur-offwhite rounded-lg p-4">
+                <div id="day${day.day}" class="bg-ayur-offwhite rounded-lg p-4 mb-4">
                     <div class="flex justify-between items-center mb-3">
-                        <h5 class="font-medium text-ayur-brown-800">Day ${day.day} - ${formatDate(day.date)}</h5>
-                        <button type="button" class="add-procedure-btn text-ayur-green-600 hover:text-ayur-green-700">
-                            <i class="fa-solid fa-plus"></i> Add Procedure
-                        </button>
+                        <div class="flex items-center space-x-2">
+                            <h5 class="font-medium text-ayur-brown-800">Day ${day.day} - </h5>
+                            <input type="date" 
+                                   class="day-date-input px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ayur-green-500 focus:border-ayur-green-500"
+                                   value="${day.date}"
+                                   data-day="${day.day}"
+                                   title="Click to edit date">
+                        </div>
+                        <div class="flex space-x-2">
+                            <button type="button" class="add-procedure-btn text-ayur-green-600 hover:text-ayur-green-700">
+                                <i class="fa-solid fa-plus"></i> Add Procedure
+                            </button>
+                            <button type="button" class="remove-day-btn text-red-600 hover:text-red-700" title="Remove this day">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="procedures-container grid md:grid-cols-3 gap-4">
-                        ${day.procedures.map(proc => `
+                        ${day.procedures.map((proc, procIndex) => `
                             <div class="procedure-card bg-white rounded-md p-3 border border-gray-200">
                                 <div class="flex justify-between items-start">
-                                    <div>
+                                    <div class="flex-1">
                                         <p class="text-sm font-medium text-ayur-brown-800">${proc.name}</p>
                                         <p class="text-xs text-ayur-brown-600">Duration: ${proc.duration} mins</p>
+                                        ${proc.notes ? `<p class="text-xs text-gray-500 mt-1">${proc.notes}</p>` : ''}
                                     </div>
-                                    <div class="flex space-x-1">
-                                        <button type="button" class="text-ayur-brown-600 hover:text-ayur-brown-700">
+                                    <div class="flex space-x-1 ml-2">
+                                        <button type="button" 
+                                                class="edit-procedure-btn text-ayur-brown-600 hover:text-ayur-brown-700"
+                                                data-day="${day.day}" 
+                                                data-procedure-index="${procIndex}"
+                                                title="Edit procedure">
                                             <i class="fa-solid fa-pencil text-xs"></i>
                                         </button>
-                                        <button type="button" class="remove-procedure-btn text-red-600 hover:text-red-700">
+                                        <button type="button" 
+                                                class="remove-procedure-btn text-red-600 hover:text-red-700"
+                                                title="Remove procedure">
                                             <i class="fa-solid fa-xmark text-xs"></i>
                                         </button>
                                     </div>
@@ -490,16 +711,154 @@ $(document).ready(function () {
         const day = dayWiseSchedule.find(d => d.day === dayNumber);
 
         if (day) {
-            // You can add a modal or form to collect procedure details
-            const procedure = {
-                name: 'New Procedure',
-                duration: 30
-            };
-
-            day.procedures.push(procedure);
-            updateDayWiseDisplay();
+            // Show modal to collect procedure details
+            showProcedureModal(dayNumber, null);
         }
     }
+
+    // Show procedure modal for adding/editing procedures
+    function showProcedureModal(dayNumber, procedureIndex = null) {
+        const isEdit = procedureIndex !== null;
+        const procedure = isEdit ? dayWiseSchedule.find(d => d.day === dayNumber).procedures[procedureIndex] : null;
+
+        const modalHtml = `
+            <div id="procedureModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-ayur-brown-800">
+                            ${isEdit ? 'Edit Procedure' : 'Add New Procedure'}
+                        </h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closeProcedureModal()">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="procedureForm">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-ayur-brown-700 mb-1">
+                                    Procedure Name *
+                                </label>
+                                <input type="text" 
+                                       id="procedureNameInput" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ayur-green-500 focus:border-ayur-green-500"
+                                       placeholder="Enter procedure name"
+                                       value="${procedure ? procedure.name : ''}"
+                                       required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-ayur-brown-700 mb-1">
+                                    Duration (minutes) *
+                                </label>
+                                <input type="number" 
+                                       id="procedureDurationInput" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ayur-green-500 focus:border-ayur-green-500"
+                                       placeholder="Enter duration in minutes"
+                                       min="1"
+                                       max="480"
+                                       value="${procedure ? procedure.duration : ''}"
+                                       required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-ayur-brown-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea id="procedureNotesInput" 
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ayur-green-500 focus:border-ayur-green-500"
+                                          rows="3"
+                                          placeholder="Add any additional notes...">${procedure ? (procedure.notes || '') : ''}</textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 mt-6">
+                            <button type="button" 
+                                    class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                                    onclick="closeProcedureModal()">
+                                Cancel
+                            </button>
+                            <button type="submit" 
+                                    class="px-4 py-2 bg-ayur-green-600 text-white rounded-md hover:bg-ayur-green-700">
+                                ${isEdit ? 'Update Procedure' : 'Add Procedure'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        $('#procedureModal').remove();
+
+        // Add modal to body
+        $('body').append(modalHtml);
+
+        // Focus on first input
+        $('#procedureNameInput').focus();
+
+        // Handle form submission
+        $('#procedureForm').on('submit', function (e) {
+            e.preventDefault();
+            saveProcedure(dayNumber, procedureIndex);
+        });
+    }
+
+    // Save procedure
+    function saveProcedure(dayNumber, procedureIndex = null) {
+        const name = $('#procedureNameInput').val().trim();
+        const duration = parseInt($('#procedureDurationInput').val());
+        const notes = $('#procedureNotesInput').val().trim();
+
+        // Validate inputs
+        if (!name) {
+            showAlert('error', 'Please enter a procedure name');
+            return;
+        }
+
+        if (!duration || duration < 1 || duration > 480) {
+            showAlert('error', 'Please enter a valid duration (1-480 minutes)');
+            return;
+        }
+
+        const day = dayWiseSchedule.find(d => d.day === dayNumber);
+        if (!day) {
+            showAlert('error', 'Day not found');
+            return;
+        }
+
+        const procedure = {
+            name: name,
+            duration: duration,
+            notes: notes || ''
+        };
+
+        if (procedureIndex !== null) {
+            // Edit existing procedure
+            day.procedures[procedureIndex] = procedure;
+        } else {
+            // Add new procedure
+            day.procedures.push(procedure);
+        }
+
+        // Close modal and update display
+        closeProcedureModal();
+        updateDayWiseDisplay();
+
+        showAlert('success', `Procedure ${procedureIndex !== null ? 'updated' : 'added'} successfully!`);
+    }
+
+    // Close procedure modal
+    window.closeProcedureModal = function () {
+        $('#procedureModal').remove();
+    };
+
+    // Close modal when clicking outside
+    $(document).on('click', '#procedureModal', function (e) {
+        if (e.target === this) {
+            closeProcedureModal();
+        }
+    });
 
     // Format date
     function formatDate(dateString) {
@@ -513,30 +872,24 @@ $(document).ready(function () {
 
     // Submit treatment plan
     function submitTreatmentPlan(isDraft = false) {
-        // Validate required fields
-        if (!selectedPatient || !selectedPatient.id) {
-            showAlert('error', 'Please select a patient');
-            return;
-        }
-
-        if (!$('#treatmentCategory').val()) {
-            showAlert('error', 'Please select treatment category');
-            return;
-        }
-
-        if (!$('#procedureName').val()) {
-            showAlert('error', 'Please enter procedure name');
-            return;
-        }
-
-        if (!$('#startDate').val() || !$('#endDate').val()) {
-            showAlert('error', 'Please select start and end dates');
-            return;
-        }
-
-        if (!$('#doshaReport').val()) {
-            showAlert('error', 'Please enter dosha report');
-            return;
+        // For drafts, we can be more lenient with validation
+        if (!isDraft) {
+            // Full validation for final submission
+            if (!validateForm()) {
+                return;
+            }
+        } else {
+            // Basic validation for drafts - just check if we have a patient
+            if (!selectedPatient || !selectedPatient.id) {
+                updateFieldValidation('patient_id', false, 'Patient selection is required even for drafts');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Please select a patient before saving as draft',
+                    confirmButtonColor: '#EF4444'
+                });
+                return;
+            }
         }
 
         // Collect form data
@@ -579,43 +932,50 @@ $(document).ready(function () {
         }
 
         // Show loading
-        showLoading();
+        showLoading(isDraft);
 
-        // Submit form
-        $.ajax({
-            url: '/admin/treatment-plan',
+        // Create a temporary form for submission
+        const tempForm = $('<form>', {
             method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function (response) {
-                hideLoading();
-                if (response.success) {
-                    showAlert('success', response.message);
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    showAlert('error', response.message);
-                }
-            },
-            error: function (xhr) {
-                hideLoading();
-                if (xhr.status === 422) {
-                    const errors = xhr.responseJSON.errors;
-                    let errorMessage = 'Please fix the following errors:\n';
-                    Object.keys(errors).forEach(key => {
-                        errorMessage += `- ${errors[key][0]}\n`;
-                    });
-                    showAlert('error', errorMessage);
-                } else {
-                    showAlert('error', 'Failed to create treatment plan. Please try again.');
-                }
-            }
+            action: '/admin/treatment-plan',
+            enctype: 'multipart/form-data'
         });
+
+        // Add CSRF token
+        tempForm.append($('<input>', {
+            type: 'hidden',
+            name: '_token',
+            value: $('meta[name="csrf-token"]').attr('content')
+        }));
+
+        // Add all form data to the temporary form
+        for (let [key, value] of formData.entries()) {
+            if (key === 'consent_file' && value instanceof File) {
+                // Handle file input specially
+                const fileInput = $('<input>', {
+                    type: 'file',
+                    name: key,
+                    style: 'display: none;'
+                });
+
+                // Create a new FileList with our file
+                const dt = new DataTransfer();
+                dt.items.add(value);
+                fileInput[0].files = dt.files;
+
+                tempForm.append(fileInput);
+            } else {
+                tempForm.append($('<input>', {
+                    type: 'hidden',
+                    name: key,
+                    value: value
+                }));
+            }
+        }
+
+        // Append form to body and submit
+        $('body').append(tempForm);
+        tempForm.submit();
     }
 
     // Show alert
@@ -629,11 +989,16 @@ $(document).ready(function () {
     }
 
     // Show loading
-    function showLoading() {
+    function showLoading(isDraft = false) {
+        const message = isDraft
+            ? 'Please wait while we save your draft...'
+            : 'Please wait while we create your treatment plan...';
+
         Swal.fire({
             title: 'Processing...',
-            text: 'Please wait while we create your treatment plan',
+            text: message,
             allowOutsideClick: false,
+            showConfirmButton: false,
             didOpen: () => {
                 Swal.showLoading();
             }
@@ -645,10 +1010,7 @@ $(document).ready(function () {
         Swal.close();
     }
 
-    // Date change handlers
-    $('#startDate, #endDate').on('change', function () {
-        generateDayWiseSchedule();
-    });
+    // Date change handlers are now handled in the validation system
 
     // Click outside to hide patient results
     $(document).on('click', function (e) {
@@ -656,6 +1018,602 @@ $(document).ready(function () {
             hidePatientResults();
         }
     });
+
+    // ==================== VALIDATION SYSTEM ====================
+
+    // Initialize validation
+    function initializeValidation() {
+        // Define validation rules
+        validationRules = {
+            patient_id: {
+                required: true,
+                message: 'Patient selection is required'
+            },
+            treatment_category: {
+                required: true,
+                message: 'Treatment category is required'
+            },
+            procedure_name: {
+                required: true,
+                minLength: 3,
+                maxLength: 255,
+                message: 'Procedure name is required and must be between 3-255 characters'
+            },
+            start_date: {
+                required: true,
+                type: 'date',
+                message: 'Start date is required'
+            },
+            end_date: {
+                required: true,
+                type: 'date',
+                message: 'End date is required'
+            },
+            dosha_report: {
+                required: true,
+                message: 'Dosha report is required'
+            },
+            // oils_required: {
+            //     required: true,
+            //     type: 'checkbox',
+            //     message: 'Please select at least one oil'
+            // },
+            // herbs_required: {
+            //     required: true,
+            //     type: 'checkbox',
+            //     message: 'Please select at least one herb'
+            // },
+            special_instructions: {
+                required: true,
+                minLength: 5,
+                maxLength: 1000,
+                message: 'Special instructions are required and must be between 5-1000 characters'
+            },
+            recommended_therapist: {
+                required: true,
+                message: 'Please select a recommended therapist'
+            },
+            room_allocation: {
+                required: true,
+                message: 'Please select a room for allocation'
+            },
+            consent_file: {
+                required: true,
+                type: 'file',
+                allowedTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'],
+                maxSize: 5242880, // 5MB in bytes
+                message: 'Consent file is required (PDF, JPG, JPEG, PNG, max 5MB)'
+            }
+        };
+
+        // Add real-time validation listeners
+        addValidationListeners();
+    }
+
+    // Add validation event listeners
+    function addValidationListeners() {
+        // Patient selection validation
+        $('#patientSelect').on('change', function () {
+            validateField('patient_id', selectedPatient ? selectedPatient.id : '');
+        });
+
+        // Treatment category validation
+        $('#treatmentCategory').on('change blur', function () {
+            validateField('treatment_category', $(this).val());
+        });
+
+        // Procedure name validation
+        $('#procedureName').on('input blur', function () {
+            validateField('procedure_name', $(this).val());
+        });
+
+        // Date validation (blur events only - change events handled separately)
+        $('#startDate').on('blur', function () {
+            const startDate = $(this).val();
+            validateField('start_date', startDate);
+        });
+
+        $('#endDate').on('blur', function () {
+            const endDate = $(this).val();
+            validateField('end_date', endDate);
+        });
+
+        // Dosha report validation
+        $('#doshaReport').on('input blur', function () {
+            validateField('dosha_report', $(this).val());
+        });
+
+        // Special instructions validation
+        $('#specialInstructions').on('input blur', function () {
+            validateField('special_instructions', $(this).val());
+        });
+
+        // Therapist validation
+        $('#recommendedTherapist').on('change blur', function () {
+            validateField('recommended_therapist', $(this).val());
+        });
+
+        // Room allocation validation
+        $('#roomAllocation').on('change blur', function () {
+            validateField('room_allocation', $(this).val());
+        });
+
+        // Consent file validation
+        $('#consentFile').on('change', function () {
+            validateConsentFile(this);
+        });
+
+        // Oils validation
+        $('input[name="oils_required[]"]').on('change', function () {
+            validateCheckboxGroup('oils_required', 'input[name="oils_required[]"]:checked');
+        });
+
+        // Herbs validation
+        $('input[name="herbs_required[]"]').on('change', function () {
+            validateCheckboxGroup('herbs_required', 'input[name="herbs_required[]"]:checked');
+        });
+    }
+
+    // Validate individual field
+    function validateField(fieldName, value) {
+        const rule = validationRules[fieldName];
+        if (!rule) return true;
+
+        let isValid = true;
+        let errorMessage = '';
+
+        // Required validation
+        if (rule.required && (!value || value.toString().trim() === '')) {
+            isValid = false;
+            errorMessage = rule.message || `${fieldName} is required`;
+        }
+
+        // Length validations
+        if (isValid && value && rule.minLength && value.toString().length < rule.minLength) {
+            isValid = false;
+            errorMessage = rule.message || `${fieldName} must be at least ${rule.minLength} characters`;
+        }
+
+        if (isValid && value && rule.maxLength && value.toString().length > rule.maxLength) {
+            isValid = false;
+            errorMessage = rule.message || `${fieldName} must not exceed ${rule.maxLength} characters`;
+        }
+
+        // Date validation
+        if (isValid && rule.type === 'date' && value) {
+            const date = new Date(value);
+            if (isNaN(date.getTime())) {
+                isValid = false;
+                errorMessage = 'Please enter a valid date';
+            }
+        }
+
+        // Update validation state
+        updateFieldValidation(fieldName, isValid, errorMessage);
+        return isValid;
+    }
+
+    // Validate date range
+    function validateDateRange(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        let isValid = true;
+        let errorMessage = '';
+
+        if (end < start) {
+            isValid = false;
+            errorMessage = 'End date must be after or equal to start date';
+        }
+
+        updateFieldValidation('end_date', isValid, errorMessage);
+        return isValid;
+    }
+
+    // Validate checkbox group
+    function validateCheckboxGroup(fieldName, selector) {
+        const rule = validationRules[fieldName];
+        if (!rule) return true;
+
+        const checkedItems = $(selector);
+        let isValid = true;
+        let errorMessage = '';
+
+        if (rule.required && checkedItems.length === 0) {
+            isValid = false;
+            errorMessage = rule.message || `Please select at least one ${fieldName}`;
+        }
+
+        // Special handling for checkbox groups
+        updateCheckboxGroupValidation(fieldName, selector, isValid, errorMessage);
+        return isValid;
+    }
+
+    // Update checkbox group validation display
+    function updateCheckboxGroupValidation(fieldName, selector, isValid, errorMessage) {
+        const $allCheckboxes = $('input[name="' + fieldName + '[]"]');
+        const $container = $allCheckboxes.first().closest('.space-y-4 > div');
+        const $checkboxContainer = $container.find('.grid');
+
+        // Remove existing errors and styling
+        $container.find('.validation-error').remove();
+        $checkboxContainer.removeClass('border-red-500 border-green-500');
+
+        if (!isValid) {
+            // Add red border to checkbox container
+            $checkboxContainer.addClass('border border-red-500 rounded p-2');
+
+            // Add error message after the checkbox container
+            const errorHtml = `
+                <div class="validation-error mt-2 text-sm text-red-600">
+                    ${errorMessage}
+                </div>
+            `;
+            $container.append(errorHtml);
+
+            validationErrors[fieldName] = errorMessage;
+        } else {
+            // Add green border for valid selection
+            $checkboxContainer.addClass('border border-green-500 rounded p-2');
+            validationErrors[fieldName] = null;
+        }
+    }
+
+    // Validate consent file
+    function validateConsentFile(input) {
+        const rule = validationRules.consent_file;
+        const file = input.files[0];
+
+        let isValid = true;
+        let errorMessage = '';
+
+        // Required validation
+        if (rule.required && !file) {
+            isValid = false;
+            errorMessage = 'Consent file is required';
+        }
+
+        if (file) {
+            // File type validation
+            if (rule.allowedTypes && !rule.allowedTypes.includes(file.type)) {
+                isValid = false;
+                errorMessage = 'Please select a valid file type (PDF, JPG, JPEG, PNG)';
+            }
+
+            // File size validation
+            if (isValid && rule.maxSize && file.size > rule.maxSize) {
+                isValid = false;
+                errorMessage = 'File size must not exceed 5MB';
+            }
+        }
+
+        if (!isValid) {
+            input.value = '';
+            consentFile = null;
+            $('#consentPreview').empty();
+        } else if (file) {
+            // File is valid
+            consentFile = file;
+        }
+
+        updateFieldValidation('consent_file', isValid, errorMessage);
+        return isValid;
+    }
+
+    // Update field validation display
+    function updateFieldValidation(fieldName, isValid, errorMessage) {
+        // Map field names to their input elements
+        const fieldMap = {
+            'patient_id': '#patientSearchContainer',
+            'treatment_category': '#treatmentCategory',
+            'procedure_name': '#procedureName',
+            'start_date': '#startDate',
+            'end_date': '#endDate',
+            'dosha_report': '#doshaReport',
+            'special_instructions': '#specialInstructions',
+            'recommended_therapist': '#recommendedTherapist',
+            'room_allocation': '#roomAllocation',
+            'consent_file': '#consentFile',
+            'oils_required': 'input[name="oils_required[]"]',
+            'herbs_required': 'input[name="herbs_required[]"]'
+        };
+
+        const fieldSelector = fieldMap[fieldName];
+        if (!fieldSelector) return;
+
+        // Special handling for patient_id
+        if (fieldName === 'patient_id') {
+            const $container = $(fieldSelector);
+            const $patientSelect = $container.find('#patientSelect');
+            const $patientSearch = $container.find('#patientSearch');
+
+            // Remove existing error and styling
+            $container.find('.validation-error').remove();
+            $patientSelect.removeClass('border-red-500 border-green-500');
+            $patientSearch.removeClass('border-red-500 border-green-500');
+
+            if (!isValid) {
+                // Add red border to active patient selection field
+                if ($('#patientSelectContainer').is(':visible')) {
+                    $patientSelect.addClass('border-red-500');
+                } else {
+                    $patientSearch.addClass('border-red-500');
+                }
+
+                // Add error message for patient selection (without icon)
+                const errorHtml = `
+                    <div class="validation-error mt-1 text-sm text-red-600">
+                        ${errorMessage}
+                    </div>
+                `;
+                $container.append(errorHtml);
+                validationErrors[fieldName] = errorMessage;
+            } else {
+                // Add green border to active patient selection field
+                if ($('#patientSelectContainer').is(':visible')) {
+                    $patientSelect.addClass('border-green-500');
+                } else {
+                    $patientSearch.addClass('border-green-500');
+                }
+                validationErrors[fieldName] = null;
+            }
+            return;
+        }
+
+        // Special handling for consent_file
+        if (fieldName === 'consent_file') {
+            const $field = $(fieldSelector);
+            const $container = $field.closest('.space-y-4 > div');
+            const $dropZone = $container.find('.border-dashed');
+
+            // Remove existing error and styling
+            $container.find('.validation-error').remove();
+            $dropZone.removeClass('border-red-500 border-green-500');
+
+            if (!isValid) {
+                // Add red border to drop zone
+                $dropZone.addClass('border-red-500');
+
+                // Add error message
+                const errorHtml = `
+                    <div class="validation-error mt-2 text-sm text-red-600">
+                        ${errorMessage}
+                    </div>
+                `;
+                $container.append(errorHtml);
+                validationErrors[fieldName] = errorMessage;
+            } else if (consentFile) {
+                // Add green border for valid file
+                $dropZone.addClass('border-green-500');
+                validationErrors[fieldName] = null;
+            }
+            return;
+        }
+
+        const $field = $(fieldSelector);
+        const $container = $field.closest('.space-y-4 > div, .grid > div, .relative');
+
+        // Remove existing error and styling
+        $container.find('.validation-error').remove();
+        $field.removeClass('border-red-500 focus:border-red-500 focus:ring-red-200 border-green-500');
+
+        if (isValid) {
+            // Add success styling - green border
+            $field.addClass('border-green-500');
+            validationErrors[fieldName] = null;
+        } else if (!isValid) {
+            // Add error styling - red border
+            $field.addClass('border-red-500 focus:border-red-500 focus:ring-red-200');
+
+            // Add error message
+            const errorHtml = `
+                <div class="validation-error mt-1 text-sm text-red-600">
+                    ${errorMessage}
+                </div>
+            `;
+            $container.append(errorHtml);
+
+            validationErrors[fieldName] = errorMessage;
+        }
+    }
+
+    // Validate entire form
+    function validateForm() {
+        let isFormValid = true;
+        const errors = [];
+
+        // Validate patient selection
+        if (!validateField('patient_id', selectedPatient ? selectedPatient.id : '')) {
+            isFormValid = false;
+            errors.push('Patient selection is required');
+        }
+
+        // Validate treatment category
+        if (!validateField('treatment_category', $('#treatmentCategory').val())) {
+            isFormValid = false;
+            errors.push('Treatment category is required');
+        }
+
+        // Validate procedure name
+        if (!validateField('procedure_name', $('#procedureName').val())) {
+            isFormValid = false;
+            errors.push('Procedure name is required');
+        }
+
+        // Validate dates
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+
+        if (!validateField('start_date', startDate)) {
+            isFormValid = false;
+            errors.push('Start date is required');
+        }
+
+        if (!validateField('end_date', endDate)) {
+            isFormValid = false;
+            errors.push('End date is required');
+        }
+
+        if (startDate && endDate) {
+            if (!validateDateRange(startDate, endDate)) {
+                isFormValid = false;
+                errors.push('End date must be after or equal to start date');
+            }
+
+            if (!validateSpecialCases()) {
+                isFormValid = false;
+                errors.push('Please check treatment duration');
+            }
+        }
+
+        // Validate dosha report
+        if (!validateField('dosha_report', $('#doshaReport').val())) {
+            isFormValid = false;
+            errors.push('Dosha report is required');
+        }
+
+        // Validate oils required
+        if (!validateCheckboxGroup('oils_required', 'input[name="oils_required[]"]:checked')) {
+            isFormValid = false;
+            errors.push('Please select at least one oil');
+        }
+
+        // Validate herbs required
+        if (!validateCheckboxGroup('herbs_required', 'input[name="herbs_required[]"]:checked')) {
+            isFormValid = false;
+            errors.push('Please select at least one herb');
+        }
+
+        // Validate special instructions (now required)
+        if (!validateField('special_instructions', $('#specialInstructions').val())) {
+            isFormValid = false;
+            errors.push('Special instructions are required');
+        }
+
+        // Validate recommended therapist
+        if (!validateField('recommended_therapist', $('#recommendedTherapist').val())) {
+            isFormValid = false;
+            errors.push('Please select a recommended therapist');
+        }
+
+        // Validate room allocation
+        if (!validateField('room_allocation', $('#roomAllocation').val())) {
+            isFormValid = false;
+            errors.push('Please select a room for allocation');
+        }
+
+        // Validate consent file (only required for new forms, optional for edit)
+        const isEditMode = $('input[name="_method"][value="PATCH"]').length > 0;
+        const hasExistingFile = $('.bg-ayur-offwhite').length > 0; // Check if existing file display is present
+
+        if (!isEditMode || !hasExistingFile) {
+            // Required for new forms or edit forms without existing file
+            if (!consentFile) {
+                updateFieldValidation('consent_file', false, 'Consent file is required');
+                isFormValid = false;
+                errors.push('Consent file is required');
+            }
+        }
+
+        // Validate day-wise schedule (optional but should have at least one day if specified)
+        if (dayWiseSchedule.length === 0) {
+            // Auto-generate if dates are provided
+            if (startDate && endDate) {
+                generateDayWiseSchedule();
+            }
+        }
+
+        // If form is invalid, scroll to first error (no popup)
+        if (!isFormValid) {
+            scrollToFirstError();
+        }
+
+        return isFormValid;
+    }
+
+    // Scroll to first error
+    function scrollToFirstError() {
+        const firstError = $('.validation-error').first();
+        if (firstError.length) {
+            $('html, body').animate({
+                scrollTop: firstError.offset().top - 100
+            }, 500);
+        }
+    }
+
+    // Validation summary removed - only show field-level errors
+
+    // Clear all validation errors
+    function clearValidationErrors() {
+        $('.validation-error').remove();
+        $('input, select, textarea').removeClass('border-red-500 border-green-500 focus:border-red-500 focus:ring-red-200');
+
+        // Clear patient selection styling
+        $('#patientSelect, #patientSearch').removeClass('border-red-500 border-green-500');
+
+        // Clear checkbox group styling
+        $('.grid').removeClass('border border-red-500 border-green-500 rounded p-2');
+
+        // Clear file upload styling
+        $('.border-dashed').removeClass('border-red-500 border-green-500');
+
+        validationErrors = {};
+    }
+
+    // Reset form and validation
+    // function resetForm() {
+    //     // Clear form data
+    //     $('#treatmentPlanForm')[0].reset();
+
+    //     // Clear global variables
+    //     selectedPatient = null;
+    //     consentFile = null;
+    //     dayWiseSchedule = [];
+
+    //     // Clear displays
+    //     $('#patientDisplay').empty();
+    //     $('#consentPreview').empty();
+    //     $('#dayWiseSchedule').empty();
+
+    //     // Clear validation
+    //     clearValidationErrors();
+
+    //     // Reset to default tab
+    //     $('#selectTab').click();
+
+    //     // Reinitialize form
+    //     initializeForm();
+
+    //     // Ensure end date is blank
+    //     $('#endDate').val('');
+    // }
+
+
+
+    // Enhanced validation for special cases
+    function validateSpecialCases() {
+        // Check if end date is too far in future (more than 1 year)
+        const startDate = new Date($('#startDate').val());
+        const endDate = new Date($('#endDate').val());
+
+        if (startDate && endDate) {
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 365) {
+                updateFieldValidation('end_date', false, 'Treatment duration cannot exceed 1 year');
+                return false;
+            }
+
+            if (diffDays < 1) {
+                updateFieldValidation('end_date', false, 'Treatment must be at least 1 day');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     // Action functions for treatment plan management
     window.viewTreatmentPlan = function (planId) {
@@ -666,49 +1624,45 @@ $(document).ready(function () {
         window.location.href = `/treatment-plan/${planId}/edit`;
     };
 
-    window.deleteTreatmentPlan = function (planId) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#EF4444',
-            cancelButtonColor: '#6B7280',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: `/treatment-plan/${planId}`,
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            Swal.fire(
-                                'Deleted!',
-                                response.message,
-                                'success'
-                            ).then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire(
-                                'Error!',
-                                response.message,
-                                'error'
-                            );
-                        }
-                    },
-                    error: function (xhr) {
-                        Swal.fire(
-                            'Error!',
-                            'Failed to delete treatment plan.',
-                            'error'
-                        );
-                    }
-                });
-            }
-        });
-    };
+    // Confirm delete helper using fetch to send DELETE
+    // document.querySelectorAll('.delete-treatment-btn').forEach(function(btn) {
+    //     btn.addEventListener('click', function() {
+    //         const id = this.getAttribute('data-id');
+    //         const url = document.getElementById('delete-treatment-form-' + id).action;
+    //         Swal.fire({
+    //             text: 'Are you sure you want to delete this Treatment Plan?',
+    //             icon: 'warning',
+    //             showCancelButton: true,
+    //             confirmButtonText: 'Yes, delete!',
+    //             cancelButtonText: 'No, cancel'
+    //         }).then(function(result) {
+    //             if (result.isConfirmed) {
+    //                 fetch(url, {
+    //                     method: 'POST',
+    //                     headers: {
+    //                         'Content-Type': 'application/json',
+    //                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+    //                     },
+    //                     body: JSON.stringify({
+    //                         _method: 'DELETE'
+    //                     })
+    //                 }).then(res => {
+    //                     if (res.ok) {
+    //                         Swal.fire({
+    //                             text: 'Treatment Plan deleted successfully!',
+    //                             icon: 'success'
+    //                         }).then(() => location.reload());
+    //                     } else {
+    //                         throw new Error('Failed');
+    //                     }
+    //                 }).catch(() => {
+    //                     Swal.fire({
+    //                         text: 'Something went wrong!',
+    //                         icon: 'error'
+    //                     });
+    //                 });
+    //             }
+    //         });
+    //     });
+    // });
 });

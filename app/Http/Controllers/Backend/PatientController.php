@@ -93,15 +93,15 @@ class PatientController extends Controller
 
         $validated = $validator->validated();
 
-        // Store photo under public/backend-assets/media/uploads/products
+        // Store photo under public/backend-assets/media/uploads/patient
         $photo = $request->file('photo');
-        $destinationPath = public_path('backend-assets/media/uploads/products');
+        $destinationPath = public_path('backend-assets/media/uploads/patient');
         if (!File::exists($destinationPath)) {
             File::makeDirectory($destinationPath, 0755, true);
         }
         $photoFilename = 'patient_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $photo->getClientOriginalExtension();
         $photo->move($destinationPath, $photoFilename);
-        $photoPath = 'backend-assets/media/uploads/products/' . $photoFilename;
+        $photoPath = 'backend-assets/media/uploads/patient/' . $photoFilename;
 
         $uhid = $this->generateUhid();
 
@@ -148,7 +148,13 @@ class PatientController extends Controller
             ->orderBy('appointment_time', 'desc')
             ->get();
 
-        return view('backend.patients.show', compact('pagename', 'breadcrumb', 'patient', 'appointments'));
+        // Load prescriptions with related doctor and prescription items
+        $prescriptions = $patient->prescriptions()
+            ->with(['doctor', 'items.medicine'])
+            ->orderBy('prescription_date', 'desc')
+            ->get();
+
+        return view('backend.patients.show', compact('pagename', 'breadcrumb', 'patient', 'appointments', 'prescriptions'));
     }
 
     //  Show the form for editing the specified patient.
@@ -217,13 +223,13 @@ class PatientController extends Controller
             }
 
             $newPhoto = $request->file('photo');
-            $destinationPath = public_path('backend-assets/media/uploads/products');
+            $destinationPath = public_path('backend-assets/media/uploads/patient');
             if (!File::exists($destinationPath)) {
                 File::makeDirectory($destinationPath, 0755, true);
             }
             $photoFilename = 'patient_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $newPhoto->getClientOriginalExtension();
             $newPhoto->move($destinationPath, $photoFilename);
-            $updateData['photo_path'] = 'backend-assets/media/uploads/products/' . $photoFilename;
+            $updateData['photo_path'] = 'backend-assets/media/uploads/patient/' . $photoFilename;
         }
 
         $patient->update($updateData);

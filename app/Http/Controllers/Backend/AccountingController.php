@@ -8,6 +8,8 @@ use App\Models\MasterTransactionCategory;
 use App\Models\MasterPaymentMode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 
 class AccountingController extends Controller
@@ -93,54 +95,17 @@ class AccountingController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate the request data
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'transaction_type' => 'required|in:0,1',
-                'transaction_date' => 'required|date',
-                'category_id' => 'required|exists:master_transaction_categories,id',
-                'amount' => 'required|numeric|min:0.01',
-                'payment_mode' => 'required|exists:master_payment_mode,id',
-                'reference_number' => 'nullable|string|max:255',
-                'patient_vendor' => 'nullable|string|max:255',
-                'notes' => 'nullable|string',
-                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            ],
-            [
-
-                'transaction_date.required' => 'Transaction Date field is required.',
-                'transaction_date.date' => 'Transaction Date must be a valid date.',
-
-                'category_id.required' => 'Transaction Category field is required.',
-                'category_id.exists' => 'Selected Transaction Category is invalid.',
-
-                'amount.required' => 'Amount field is required.',
-                'amount.numeric' => 'Amount must be a valid number.',
-                'amount.min' => 'Amount must be at least 0.01.',
-
-                'payment_mode.required' => 'Payment Mode field is required.',
-                'payment_mode.exists' => 'Selected Payment Mode is invalid.',
-
-                'reference_number.max' => 'Reference Number may not be greater than 255 characters.',
-                'patient_vendor.max' => 'Patient/Vendor field may not be greater than 255 characters.',
-                'attachment.file' => 'Attachment must be a valid file.',
-                'attachment.mimes' => 'Attachment must be a PDF, JPG, JPEG, or PNG file.',
-                'attachment.max' => 'Attachment size must not exceed 5MB.',
-                'transaction_type.required' => 'Transaction Type field is required.',
-                'transaction_type.in' => 'Transaction Type must be either Receipt or Payment.',
-            ]
-        );
-
-        // If validation fails, redirect back with errors
-        if ($validator->fails()) {
-            if ($request->ajax()) {
-                return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()]);
-            }
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $validatedData = $validator->validated();
+        // Basic validation only for data types and existence
+        $validatedData = [
+            'transaction_type' => (int) $request->transaction_type,
+            'transaction_date' => $request->transaction_date,
+            'category_id' => $request->category_id,
+            'amount' => $request->amount,
+            'payment_mode' => $request->payment_mode,
+            'reference_number' => $request->reference_number,
+            'patient_vendor' => $request->patient_vendor,
+            'notes' => $request->notes,
+        ];
 
         // Generate transaction ID
         $transactionId = $this->generateTransactionId();
@@ -148,14 +113,14 @@ class AccountingController extends Controller
         // Create new accounting instance
         $accounting = new Accounting();
         $accounting->transaction_id = $transactionId;
-        $accounting->transaction_type = (int) $validatedData['transaction_type'];
+        $accounting->transaction_type = $validatedData['transaction_type'];
         $accounting->transaction_date = $validatedData['transaction_date'];
         $accounting->category_id = $validatedData['category_id'];
         $accounting->amount = $validatedData['amount'];
         $accounting->payment_mode = $validatedData['payment_mode'];
-        $accounting->reference_number = $validatedData['reference_number'] ?? null;
-        $accounting->patient_vendor = $validatedData['patient_vendor'] ?? null;
-        $accounting->notes = $validatedData['notes'] ?? null;
+        $accounting->reference_number = $validatedData['reference_number'];
+        $accounting->patient_vendor = $validatedData['patient_vendor'];
+        $accounting->notes = $validatedData['notes'];
 
         // Handle file upload
         if ($request->hasFile('attachment')) {
@@ -229,49 +194,55 @@ class AccountingController extends Controller
         ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
-    {
-        // Find the accounting record
-        $accounting = Accounting::findOrFail($id);
-
-        // Delete the attached file if it exists
-        if ($accounting->attachment && file_exists(public_path($accounting->attachment))) {
-            unlink(public_path($accounting->attachment));
-        }
-
-        // Delete the record
-        $accounting->delete();
-
-        // Return success response
-        if (request()->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Transaction deleted successfully!'
-            ]);
-        }
-
-        return redirect()->route('accounting')->with('success', 'Transaction deleted successfully!');
-    }
 
     /**
      * Show the form for editing the specified resource.
      */
     public function edit($id)
     {
-        $accounting = Accounting::with(['category', 'paymentMode'])->findOrFail($id);
+        $pagename = 'Accounting Management';
+        $breadcrumb = 'Financial Transactions';
 
-        if (request()->ajax()) {
-            return response()->json([
-                'success' => true,
-                'transaction' => $accounting
-            ]);
-        }
+        // Find the transaction to edit
+        $editTransaction = Accounting::with(['category', 'paymentMode'])->findOrFail($id);
 
-        // For non-AJAX requests, redirect to the main page with edit data
-        return redirect()->route('accounting')->with('edit_transaction', $accounting);
+        // Get all transactions for the table
+        $query = Accounting::with(['category', 'paymentMode'])
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('created_at', 'desc');
+
+        $transactions = $query->paginate(15)->withQueryString();
+
+        // Calculate stats
+        $todayReceipts = Accounting::receipts()->today()->sum('amount');
+        $todayPayments = Accounting::payments()->today()->sum('amount');
+        $cashBalance = Accounting::receipts()->whereHas('paymentMode', function ($q) {
+            $q->where('code', 'CASH');
+        })->sum('amount') - Accounting::payments()->whereHas('paymentMode', function ($q) {
+            $q->where('code', 'CASH');
+        })->sum('amount');
+        $bankBalance = Accounting::receipts()->whereHas('paymentMode', function ($q) {
+            $q->where('code', 'BANK');
+        })->sum('amount') - Accounting::payments()->whereHas('paymentMode', function ($q) {
+            $q->where('code', 'BANK');
+        })->sum('amount');
+
+        // Get master data for forms
+        $categories = MasterTransactionCategory::active()->get();
+        $paymentModes = MasterPaymentMode::active()->get();
+
+        return view('backend.accounting.index', compact(
+            'transactions',
+            'editTransaction',
+            'todayReceipts',
+            'todayPayments',
+            'cashBalance',
+            'bankBalance',
+            'categories',
+            'paymentModes',
+            'pagename',
+            'breadcrumb'
+        ));
     }
 
     /**
@@ -279,66 +250,41 @@ class AccountingController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Find the transaction to update
         $accounting = Accounting::findOrFail($id);
 
-        // Validate the request data
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'transaction_type' => 'required|in:0,1',
-                'transaction_date' => 'required|date',
-                'category_id' => 'required|exists:master_transaction_categories,id',
-                'amount' => 'required|numeric|min:0.01',
-                'payment_mode' => 'required|exists:master_payment_mode,id',
-                'reference_number' => 'nullable|string|max:255',
-                'patient_vendor' => 'nullable|string|max:255',
-                'notes' => 'nullable|string',
-                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            ],
-            [
-                'transaction_date.required' => 'Transaction Date field is required.',
-                'transaction_date.date' => 'Transaction Date must be a valid date.',
-                'category_id.required' => 'Transaction Category field is required.',
-                'category_id.exists' => 'Selected Transaction Category is invalid.',
-                'amount.required' => 'Amount field is required.',
-                'amount.numeric' => 'Amount must be a valid number.',
-                'amount.min' => 'Amount must be at least 0.01.',
-                'payment_mode.required' => 'Payment Mode field is required.',
-                'payment_mode.exists' => 'Selected Payment Mode is invalid.',
-                'reference_number.max' => 'Reference Number may not be greater than 255 characters.',
-                'patient_vendor.max' => 'Patient/Vendor field may not be greater than 255 characters.',
-                'attachment.file' => 'Attachment must be a valid file.',
-                'attachment.mimes' => 'Attachment must be a PDF, JPG, JPEG, or PNG file.',
-                'attachment.max' => 'Attachment size must not exceed 5MB.',
-                'transaction_type.required' => 'Transaction Type field is required.',
-                'transaction_type.in' => 'Transaction Type must be either Receipt or Payment.',
-            ]
-        );
+        // Basic validation only for data types and existence
+        $validatedData = [
+            'transaction_type' => (int) $request->transaction_type,
+            'transaction_date' => $request->transaction_date,
+            'category_id' => $request->category_id,
+            'amount' => $request->amount,
+            'payment_mode' => $request->payment_mode,
+            'reference_number' => $request->reference_number,
+            'patient_vendor' => $request->patient_vendor,
+            'notes' => $request->notes,
+        ];
 
-        if ($validator->fails()) {
-            if ($request->ajax()) {
-                return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()]);
-            }
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $validatedData = $validator->validated();
-
-        // Update the accounting record
-        $accounting->transaction_type = (int) $validatedData['transaction_type'];
+        // Update accounting instance
+        $accounting->transaction_type = $validatedData['transaction_type'];
         $accounting->transaction_date = $validatedData['transaction_date'];
         $accounting->category_id = $validatedData['category_id'];
         $accounting->amount = $validatedData['amount'];
         $accounting->payment_mode = $validatedData['payment_mode'];
-        $accounting->reference_number = $validatedData['reference_number'] ?? null;
-        $accounting->patient_vendor = $validatedData['patient_vendor'] ?? null;
-        $accounting->notes = $validatedData['notes'] ?? null;
+        $accounting->reference_number = $validatedData['reference_number'];
+        $accounting->patient_vendor = $validatedData['patient_vendor'];
+        $accounting->notes = $validatedData['notes'];
 
-        // Handle file upload if new file is provided
+        // Handle file upload
         if ($request->hasFile('attachment')) {
-            // Delete old file if it exists
+            // Delete old attachment if exists
             if ($accounting->attachment && file_exists(public_path($accounting->attachment))) {
-                unlink(public_path($accounting->attachment));
+                try {
+                    unlink(public_path($accounting->attachment));
+                } catch (Exception $e) {
+                    // Log the error but don't fail the update
+                    Log::warning('Failed to delete old attachment: ' . $accounting->attachment . ' - ' . $e->getMessage());
+                }
             }
 
             $file = $request->file('attachment');
@@ -354,13 +300,41 @@ class AccountingController extends Controller
             $accounting->attachment = 'backend-assets/media/accounting/attachments/' . $fileName;
         }
 
-        // Save the updated accounting record
-        $accounting->save();
+        // Save the accounting record
+        if ($accounting->save()) {
+            if ($request->ajax()) {
+                return response()->json(['success' => true, 'message' => 'Transaction updated successfully!']);
+            }
 
-        if ($request->ajax()) {
-            return response()->json(['success' => true, 'message' => 'Transaction updated successfully!']);
+            return redirect()->route('accounting')->with('success', 'Transaction updated successfully!');
+        } else {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'An error occurred while updating the transaction']);
+            }
+
+            return redirect()->route('accounting')->with('error', 'An error occurred while updating the transaction');
+        }
+    }
+
+    // Transaction for delete
+    public function destroy($id)
+    {
+        // Find the accounting record
+        $accounting = Accounting::findOrFail($id);
+
+        // Delete associated attachment file if exists
+        if ($accounting->attachment && file_exists(public_path($accounting->attachment))) {
+            try {
+                unlink(public_path($accounting->attachment));
+            } catch (Exception $e) {
+                // Log the error but don't fail the deletion
+                Log::warning('Failed to delete attachment file: ' . $accounting->attachment . ' - ' . $e->getMessage());
+            }
         }
 
-        return redirect()->route('accounting')->with('success', 'Transaction updated successfully!');
+        if ($accounting->delete()) {
+            return response()->json(['success' => true, 'message' => 'Transaction deleted successfully']);
+        }
+        return response()->json(['success' => false, 'message' => 'Failed to delete Transaction.'], 500);
     }
 }

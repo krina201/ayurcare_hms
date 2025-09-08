@@ -17,6 +17,8 @@ use App\Http\Controllers\Backend\CalendarApiController;
 use App\Http\Controllers\Backend\AccountingController;
 use App\Http\Controllers\Backend\PharmacyController;
 use App\Http\Controllers\Backend\TreatmentPlanController;
+use App\Http\Controllers\Backend\TherapistAssignmentController;
+use App\Http\Controllers\Backend\TherapistScheduleController;
 
 
 Route::get('/', function () {
@@ -76,13 +78,11 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::put('/patients/{patient}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{patient}', [PatientController::class, 'destroy'])->name('patients.delete');
 
-
     // Prescription Routes
     Route::get('/patients/{patient}/prescriptions/create', [PrescriptionController::class, 'create'])->name('patients.prescriptions.create');
     Route::post('/patients/{patient}/prescriptions', [PrescriptionController::class, 'store'])->name('patients.prescriptions.store');
-    Route::get('/patients/{patient}/prescriptions/{prescription}/edit', [PrescriptionController::class, 'edit'])->name('patients.prescriptions.edit');
-    Route::put('/patients/{patient}/prescriptions/{prescription}', [PrescriptionController::class, 'update'])->name('patients.prescriptions.update');
 
+    // doctor routes
     Route::get('/doctor', [DoctorController::class, 'index'])->name('doctor');
     Route::get('/doctor/create', [DoctorController::class, 'create'])->name('doctor.create');
     Route::post('/doctor/store', [DoctorController::class, 'store'])->name('doctor.store');
@@ -93,7 +93,7 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::get('/appointment/calendar', [AppointmentController::class, 'calendar'])->name('appointment.calendar');
     Route::post('/appointment', [AppointmentController::class, 'store'])->name('appointment.store');
     Route::get('/appointment/search-patient', [AppointmentController::class, 'searchPatient'])->name('appointment.search-patient');
-    Route::get('/appointment/test-search', [AppointmentController::class, 'testPatientSearch'])->name('appointment.test-search');
+    Route::get('/appointment/doctors-by-department', [AppointmentController::class, 'getDoctorsByDepartment'])->name('appointment.doctors-by-department');
     Route::get('/appointment/doctor-fees', [AppointmentController::class, 'getDoctorFees'])->name('appointment.doctor-fees');
     Route::get('/appointment/doctor-time-slots', [AppointmentController::class, 'getDoctorTimeSlots'])->name('appointment.doctor-time-slots');
     Route::get('/appointment/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
@@ -111,7 +111,7 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::post('/accounting', [AccountingController::class, 'store'])->name('accounting.store');
     Route::get('/accounting/{id}/edit', [AccountingController::class, 'edit'])->name('accounting.edit');
     Route::PATCH('/accounting/{id}', [AccountingController::class, 'update'])->name('accounting.update');
-    Route::delete('/accounting/{id}', [AccountingController::class, 'destroy'])->name('accounting.destroy');
+    Route::delete('/accounting/{id}', [AccountingController::class, 'destroy'])->name('accounting.delete');
     Route::get('/accounting/stats', [AccountingController::class, 'getStats'])->name('accounting.stats');
 
     // Pharmacy Routes
@@ -129,25 +129,40 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::get('/pharmacy/available-medicines', [PharmacyController::class, 'getAvailableMedicines'])->name('pharmacy.available-medicines');
     Route::post('/pharmacy/process-dispense', [PharmacyController::class, 'processDispense'])->name('pharmacy.process-dispense');
     Route::post('/pharmacy/store-dispense-form', [PharmacyController::class, 'storeDispenseForm'])->name('pharmacy.store-dispense-form');
+    Route::get('/pharmacy/dispensations', [PharmacyController::class, 'allDispensations'])->name('pharmacy.dispensations');
 
     // Parameterized pharmacy routes (must come after API routes)
     Route::get('/pharmacy/{medicine}/edit', [PharmacyController::class, 'edit'])->name('pharmacy.edit');
-    Route::put('/pharmacy/{medicine}', [PharmacyController::class, 'update'])->name('pharmacy.update');
+    Route::PATCH('/pharmacy/{medicine}', [PharmacyController::class, 'update'])->name('pharmacy.update');
     Route::delete('/pharmacy/{medicine}', [PharmacyController::class, 'destroy'])->name('pharmacy.delete');
     Route::get('/pharmacy/{medicine}', [PharmacyController::class, 'show'])->name('pharmacy.show');
 
     // Treatment Plan Routes
     Route::get('/treatment-plan', [TreatmentPlanController::class, 'index'])->name('treatment-plan');
     Route::post('/treatment-plan', [TreatmentPlanController::class, 'store'])->name('treatment-plan.store');
-
-    // Treatment Plan API Routes (must come before parameterized routes)
     Route::get('/treatment-plan/search-patient', [TreatmentPlanController::class, 'searchPatient'])->name('treatment-plan.search-patient');
+    Route::get('/treatment-plan/therapists-by-category', [TreatmentPlanController::class, 'getTherapistsByCategory'])->name('treatment-plan.therapists-by-category');
 
     // Parameterized treatment plan routes (must come after API routes)
     Route::get('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'show'])->name('treatment-plan.show');
     Route::get('/treatment-plan/{treatmentPlan}/edit', [TreatmentPlanController::class, 'edit'])->name('treatment-plan.edit');
-    Route::put('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'update'])->name('treatment-plan.update');
+    Route::patch('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'update'])->name('treatment-plan.update');
     Route::delete('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'destroy'])->name('treatment-plan.delete');
     Route::patch('/treatment-plan/{treatmentPlan}/status', [TreatmentPlanController::class, 'updateStatus'])->name('treatment-plan.update-status');
-    Route::get('/treatment-plan/{treatmentPlan}/download-consent', [TreatmentPlanController::class, 'downloadConsent'])->name('treatment-plan.download-consent');
+    // Route::get('/treatment-plan/{treatmentPlan}/download-consent', [TreatmentPlanController::class, 'downloadConsent'])->name('treatment-plan.download-consent');
+
+    // Therapist Assignment Routes
+    Route::get('/therapist-assignment', [TherapistAssignmentController::class, 'index'])->name('doctor.therapist-assignment');
+    Route::post('/therapist-assignment', [TherapistAssignmentController::class, 'store'])->name('therapist-assignment.store');
+    Route::get('/therapist-assignment/pending-treatments', [TherapistAssignmentController::class, 'getPendingTreatments'])->name('therapist-assignment.pending-treatments');
+    Route::get('/therapist-assignment/details', [TherapistAssignmentController::class, 'getAssignmentDetails'])->name('therapist-assignment.details');
+    Route::get('/therapist-assignment/therapists-by-category', [TherapistAssignmentController::class, 'getTherapistsByTreatmentCategory'])->name('therapist-assignment.therapists-by-category');
+    Route::patch('/therapist-assignment/{assignment}/status', [TherapistAssignmentController::class, 'updateStatus'])->name('therapist-assignment.update-status');
+
+    // Therapist Schedule Routes
+    Route::get('/therapist-schedule', [TherapistScheduleController::class, 'index'])->name('doctor.therapist-schedule');
+    Route::get('/therapist-schedule/appointments', [TherapistScheduleController::class, 'getAppointments'])->name('therapist-schedule.appointments');
+    Route::get('/therapist-schedule/therapist-status', [TherapistScheduleController::class, 'getTherapistStatus'])->name('therapist-schedule.therapist-status');
+    Route::get('/therapist-schedule/schedule-data', [TherapistScheduleController::class, 'getScheduleData'])->name('therapist-schedule.schedule-data');
+    Route::patch('/therapist-schedule/{assignment}/status', [TherapistScheduleController::class, 'updateStatus'])->name('therapist-schedule.update-status');
 });

@@ -8,7 +8,7 @@
                 <div class="bg-green-50 text-green-700 px-4 py-2 rounded border border-green-200">
                     {{ session('success') }}</div>
             @endif
-            {{-- @if ($errors->any())
+            @if ($errors->any())
                 <div class="bg-red-50 text-red-700 px-4 py-2 rounded border border-red-200">
                     <ul class="list-disc list-inside">
                         @foreach ($errors->all() as $error)
@@ -16,7 +16,7 @@
                         @endforeach
                     </ul>
                 </div>
-            @endif --}}
+            @endif
         </div>
 
         <!-- TABS -->
@@ -31,14 +31,11 @@
                         class="py-2 px-4 border-b-2 {{ request()->routeIs('doctor.dashboard') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
                         Doctor Dashboard
                     </a>
-                    {{-- <a href="{{ route('therapist.assignment') }}"
-                        class="py-2 px-4 border-b-2 {{ request()->routeIs('therapist.assignment') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
+
+                    <a href="{{ route('doctor.therapist-assignment') }}"
+                        class="py-2 px-4 border-b-2 {{ request()->routeIs('doctor.therapist-assignment') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
                         Therapist Assignment
-                    </a> --}}
-                    <button
-                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
-                        Therapist Assignment
-                    </button>
+                    </a>
                 </nav>
             </div>
         </div>
@@ -170,26 +167,12 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
                                 required>
                                 <option value="">Select Specialty</option>
-                                <option value="Kayachikitsa (Internal Medicine)"
-                                    {{ old('specialty') == 'Kayachikitsa (Internal Medicine)' ? 'selected' : '' }}>
-                                    Kayachikitsa (Internal Medicine)</option>
-                                <option value="Shalya Tantra (Surgery)"
-                                    {{ old('specialty') == 'Shalya Tantra (Surgery)' ? 'selected' : '' }}>Shalya Tantra
-                                    (Surgery)</option>
-                                <option value="Shalakya Tantra (ENT & Ophthalmology)"
-                                    {{ old('specialty') == 'Shalakya Tantra (ENT & Ophthalmology)' ? 'selected' : '' }}>
-                                    Shalakya Tantra (ENT & Ophthalmology)</option>
-                                <option value="Kaumarbhritya (Pediatrics)"
-                                    {{ old('specialty') == 'Kaumarbhritya (Pediatrics)' ? 'selected' : '' }}>Kaumarbhritya
-                                    (Pediatrics)</option>
-                                <option value="Prasuti Tantra (Obstetrics & Gynecology)"
-                                    {{ old('specialty') == 'Prasuti Tantra (Obstetrics & Gynecology)' ? 'selected' : '' }}>
-                                    Prasuti Tantra (Obstetrics & Gynecology)</option>
-                                <option value="Panchakarma" {{ old('specialty') == 'Panchakarma' ? 'selected' : '' }}>
-                                    Panchakarma</option>
-                                <option value="Rasayana & Vajeekarana (Rejuvenation)"
-                                    {{ old('specialty') == 'Rasayana & Vajeekarana (Rejuvenation)' ? 'selected' : '' }}>
-                                    Rasayana & Vajeekarana (Rejuvenation)</option>
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department->id }}"
+                                        {{ old('specialty') == $department->id ? 'selected' : '' }}>
+                                        {{ $department->name }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
 
@@ -380,28 +363,12 @@
                             <label class="block text-sm font-medium text-ayur-brown-700">Expertise Areas <span
                                     class="text-red-500">*</span></label>
                             <div class="mt-2 grid md:grid-cols-3 gap-2">
-                                @php
-                                    $expertiseAreas = [
-                                        'Diabetes',
-                                        'Joint Pain',
-                                        'Digestive Disorders',
-                                        'Skin Conditions',
-                                        'Stress Management',
-                                        'Hypertension',
-                                        'Respiratory Issues',
-                                        'Weight Management',
-                                        'Hormonal Imbalances',
-                                        'Chronic Fatigue',
-                                        'Mental Health',
-                                        'Women Health',
-                                    ];
-                                @endphp
                                 @foreach ($expertiseAreas as $area)
                                     <label class="inline-flex items-center bg-white px-3 py-2 rounded-md">
-                                        <input type="checkbox" name="expertise_areas[]" value="{{ $area }}"
+                                        <input type="checkbox" name="expertise_areas[]" value="{{ $area->id }}"
                                             class="form-checkbox text-ayur-green-600"
-                                            {{ is_array(old('expertise_areas')) && in_array($area, old('expertise_areas')) ? 'checked' : '' }}>
-                                        <span class="ml-2 text-sm text-ayur-brown-700">{{ $area }}</span>
+                                            {{ is_array(old('expertise_areas')) && in_array($area->id, old('expertise_areas')) ? 'checked' : '' }}>
+                                        <span class="ml-2 text-sm text-ayur-brown-700">{{ $area->name }}</span>
                                     </label>
                                 @endforeach
                             </div>
@@ -411,24 +378,12 @@
                             <label class="block text-sm font-medium text-ayur-brown-700">Panchkarma Treatments <span
                                     class="text-red-500">*</span></label>
                             <div class="mt-2 grid md:grid-cols-3 gap-2">
-                                @php
-                                    $treatments = [
-                                        'Vamana',
-                                        'Virechana',
-                                        'Basti',
-                                        'Nasya',
-                                        'Raktamokshana',
-                                        'Shirodhara',
-                                        'Abhyanga',
-                                        'Pizhichil',
-                                    ];
-                                @endphp
-                                @foreach ($treatments as $treatment)
+                                @foreach ($treatmentCategories as $treatment)
                                     <label class="inline-flex items-center bg-white px-3 py-2 rounded-md">
                                         <input type="checkbox" name="panchkarma_treatments[]"
-                                            value="{{ $treatment }}" class="form-checkbox text-ayur-green-600"
-                                            {{ is_array(old('panchkarma_treatments')) && in_array($treatment, old('panchkarma_treatments')) ? 'checked' : '' }}>
-                                        <span class="ml-2 text-sm text-ayur-brown-700">{{ $treatment }}</span>
+                                            value="{{ $treatment->id }}" class="form-checkbox text-ayur-green-600"
+                                            {{ is_array(old('panchkarma_treatments')) && in_array($treatment->id, old('panchkarma_treatments')) ? 'checked' : '' }}>
+                                        <span class="ml-2 text-sm text-ayur-brown-700">{{ $treatment->name }}</span>
                                     </label>
                                 @endforeach
                             </div>
@@ -505,7 +460,7 @@
 @endsection
 
 @section('scripts')
-    <script>
+    {{-- <script>
         document.addEventListener("DOMContentLoaded", function() {
             const form = document.querySelector("#doctorProfileForm form");
 
@@ -704,6 +659,630 @@
 
             });
 
+        });
+    </script> --}}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const form = document.querySelector("#doctorProfileForm form");
+
+            // Image preview helper
+            const previewImage = (input, previewElId) => {
+                const previewEl = document.getElementById(previewElId);
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewEl.src = e.target.result;
+                        previewEl.style.display = "block";
+                    }
+                    reader.readAsDataURL(input.files[0]);
+                }
+            };
+
+            // Document preview helper (shows filename)
+            const previewDocument = (input, containerId) => {
+                const container = document.getElementById(containerId);
+                if (input.files && input.files[0]) {
+                    container.textContent = input.files[0].name;
+                }
+            };
+
+            // Utility function to add error message
+            const addError = (element, message, containerId = null) => {
+                const container = containerId ? document.getElementById(containerId) : element.closest("div");
+
+                // Remove existing error for this field
+                const existingError = container.querySelector(".error-text");
+                if (existingError) existingError.remove();
+
+                // Add new error
+                const error = document.createElement("p");
+                error.className = "error-text text-red-500 text-sm mt-1";
+                error.innerText = message;
+                container.appendChild(error);
+
+                element.classList.add("border-red-500");
+                return false;
+            };
+
+            // Utility function to clear error
+            const clearError = (element, containerId = null) => {
+                const container = containerId ? document.getElementById(containerId) : element.closest("div");
+                const error = container.querySelector(".error-text");
+                if (error) error.remove();
+                element.classList.remove("border-red-500");
+            };
+
+            // Date validation helper
+            const validateDate = (dateString, fieldName) => {
+                if (!dateString) return {
+                    valid: false,
+                    message: `${fieldName} is required.`
+                };
+
+                const inputDate = new Date(dateString);
+                const today = new Date();
+                const eighteenYearsAgo = new Date();
+                const seventyYearsAgo = new Date();
+
+                eighteenYearsAgo.setFullYear(today.getFullYear() - 18);
+                seventyYearsAgo.setFullYear(today.getFullYear() - 70);
+
+                // Check if date is valid
+                if (isNaN(inputDate.getTime())) {
+                    return {
+                        valid: false,
+                        message: "Please enter a valid date."
+                    };
+                }
+
+                // Check if date is not in the future
+                if (inputDate >= today) {
+                    return {
+                        valid: false,
+                        message: "Date of birth cannot be today or in the future."
+                    };
+                }
+
+                // Check minimum age (18 years)
+                if (inputDate > eighteenYearsAgo) {
+                    return {
+                        valid: false,
+                        message: "Doctor must be at least 18 years old."
+                    };
+                }
+
+                // Check maximum age (70 years) - reasonable limit
+                if (inputDate < seventyYearsAgo) {
+                    return {
+                        valid: false,
+                        message: "Please verify the date of birth (maximum age 70 years)."
+                    };
+                }
+
+                return {
+                    valid: true
+                };
+            };
+
+            // Experience validation helper
+            const validateExperience = (experience, dob) => {
+                if (!experience) return {
+                    valid: false,
+                    message: "Experience is required."
+                };
+
+                const exp = parseInt(experience);
+
+                if (isNaN(exp) || exp < 0) {
+                    return {
+                        valid: false,
+                        message: "Experience must be a positive number."
+                    };
+                }
+
+                if (exp > 50) {
+                    return {
+                        valid: false,
+                        message: "Experience cannot exceed 50 years."
+                    };
+                }
+
+                // If DOB is provided, check if experience is reasonable
+                if (dob) {
+                    const birthDate = new Date(dob);
+                    const today = new Date();
+                    const age = today.getFullYear() - birthDate.getFullYear();
+                    const maxPossibleExp = age - 20; // Assuming minimum 20 years to start practice
+
+                    if (exp > maxPossibleExp && maxPossibleExp > 0) {
+                        return {
+                            valid: false,
+                            message: `Experience seems too high. Based on age, maximum possible experience is approximately ${maxPossibleExp} years.`
+                        };
+                    }
+                }
+
+                return {
+                    valid: true
+                };
+            };
+
+            // Time validation helper
+            const validateTimeRange = (fromTime, toTime, shiftName) => {
+                if (!fromTime || !toTime) {
+                    return {
+                        valid: false,
+                        message: `Both ${shiftName} start and end times are required.`
+                    };
+                }
+
+                const from = new Date(`1970-01-01T${fromTime}:00`);
+                const to = new Date(`1970-01-01T${toTime}:00`);
+
+                if (from >= to) {
+                    return {
+                        valid: false,
+                        message: `${shiftName} end time must be after start time.`
+                    };
+                }
+
+                // Check for reasonable shift duration (minimum 1 hour, maximum 8 hours)
+                const durationHours = (to - from) / (1000 * 60 * 60);
+                if (durationHours < 1) {
+                    return {
+                        valid: false,
+                        message: `${shiftName} duration must be at least 1 hour.`
+                    };
+                }
+                if (durationHours > 8) {
+                    return {
+                        valid: false,
+                        message: `${shiftName} duration cannot exceed 8 hours.`
+                    };
+                }
+
+                return {
+                    valid: true
+                };
+            };
+
+            // Commission validation helper
+            const validateCommission = (type, value) => {
+                if (!type || !value) {
+                    return {
+                        valid: false,
+                        message: "Commission type and value are required."
+                    };
+                }
+
+                const commissionValue = parseFloat(value);
+
+                if (isNaN(commissionValue) || commissionValue < 0) {
+                    return {
+                        valid: false,
+                        message: "Commission value must be a positive number."
+                    };
+                }
+
+                if (type === 'percentage' && commissionValue > 100) {
+                    return {
+                        valid: false,
+                        message: "Percentage cannot exceed 100%."
+                    };
+                }
+
+                if (type === 'fixed' && commissionValue > 10000) {
+                    return {
+                        valid: false,
+                        message: "Fixed commission seems too high. Please verify."
+                    };
+                }
+
+                return {
+                    valid: true
+                };
+            };
+
+            // Fee validation helper
+            const validateFee = (fee, fieldName) => {
+                if (!fee) return {
+                    valid: false,
+                    message: `${fieldName} is required.`
+                };
+
+                const feeValue = parseFloat(fee);
+
+                if (isNaN(feeValue) || feeValue < 0) {
+                    return {
+                        valid: false,
+                        message: `${fieldName} must be a positive number.`
+                    };
+                }
+
+                if (feeValue < 100) {
+                    return {
+                        valid: false,
+                        message: `${fieldName} seems too low. Minimum ₹100.`
+                    };
+                }
+
+                if (feeValue > 10000) {
+                    return {
+                        valid: false,
+                        message: `${fieldName} seems too high. Maximum ₹10,000.`
+                    };
+                }
+
+                return {
+                    valid: true
+                };
+            };
+
+            // Real-time validation for DOB
+            const dobField = form.querySelector('[name="dob"]');
+            dobField?.addEventListener('blur', function() {
+                const validation = validateDate(this.value, 'Date of birth');
+                if (!validation.valid) {
+                    addError(this, validation.message);
+                } else {
+                    clearError(this);
+                }
+            });
+
+            // Real-time validation for Experience
+            const experienceField = form.querySelector('[name="experience"]');
+            experienceField?.addEventListener('blur', function() {
+                const dobValue = form.querySelector('[name="dob"]')?.value;
+                const validation = validateExperience(this.value, dobValue);
+                if (!validation.valid) {
+                    addError(this, validation.message);
+                } else {
+                    clearError(this);
+                }
+            });
+
+            // Real-time validation for fees
+            const consultationFeeField = form.querySelector('[name="consultation_fee"]');
+            consultationFeeField?.addEventListener('blur', function() {
+                const validation = validateFee(this.value, 'Consultation fee');
+                if (!validation.valid) {
+                    addError(this, validation.message);
+                } else {
+                    clearError(this);
+                }
+            });
+
+            const followupFeeField = form.querySelector('[name="followup_fee"]');
+            followupFeeField?.addEventListener('blur', function() {
+                const validation = validateFee(this.value, 'Follow-up fee');
+                if (!validation.valid) {
+                    addError(this, validation.message);
+                } else {
+                    clearError(this);
+                }
+            });
+
+            // File input change events for previews
+            const photoInput = form.querySelector('#photo');
+            photoInput?.addEventListener('change', function() {
+                clearError(document.getElementById('photo-border'), 'photo-wrapper');
+                previewImage(photoInput, 'photo-preview');
+            });
+
+            const degreeInput = form.querySelector('[name="degree_certificate"]');
+            degreeInput?.addEventListener('change', function() {
+                clearError(document.getElementById("degree-certificate-box"),
+                    'degree-certificate-container');
+                previewDocument(degreeInput, "degree-preview");
+            });
+
+            const regInput = form.querySelector('[name="registration_certificate"]');
+            regInput?.addEventListener('change', function() {
+                clearError(document.getElementById("registration-certificate-box"),
+                    'registration-certificate-container');
+                previewDocument(regInput, "registration-preview");
+            });
+
+            // Commission type change handler
+            const commissionRadios = form.querySelectorAll('[name="commission_type"]');
+            commissionRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const symbol = document.getElementById('commission-symbol');
+                    if (symbol) {
+                        symbol.textContent = this.value === 'percentage' ? '%' : '₹';
+                    }
+                });
+            });
+
+            // Main form submission validation
+            form.addEventListener("submit", function(e) {
+                let isValid = true;
+
+                // Clear all previous errors
+                form.querySelectorAll(".error-text").forEach(el => el.remove());
+                form.querySelectorAll(".border-red-500").forEach(el => {
+                    el.classList.remove("border-red-500");
+                });
+
+                // Basic required field validation
+                const requiredFields = [{
+                        name: 'full_name',
+                        message: 'Full name is required.'
+                    },
+                    {
+                        name: 'email',
+                        message: 'Email is required.'
+                    },
+                    {
+                        name: 'mobile',
+                        message: 'Mobile number is required.'
+                    },
+                    {
+                        name: 'address',
+                        message: 'Address is required.'
+                    },
+                    {
+                        name: 'specialty',
+                        message: 'Specialty is required.'
+                    },
+                    {
+                        name: 'qualification',
+                        message: 'Qualification is required.'
+                    },
+                    {
+                        name: 'registration_number',
+                        message: 'Registration number is required.'
+                    },
+                    {
+                        name: 'morning_from',
+                        message: 'Morning start time is required.'
+                    },
+                    {
+                        name: 'morning_to',
+                        message: 'Morning end time is required.'
+                    },
+                    {
+                        name: 'evening_from',
+                        message: 'Evening start time is required.'
+                    },
+                    {
+                        name: 'evening_to',
+                        message: 'Evening end time is required.'
+                    },
+                    {
+                        name: 'time_per_consultation',
+                        message: 'Time per consultation is required.'
+                    }
+                ];
+
+                requiredFields.forEach(field => {
+                    const element = form.querySelector(`[name="${field.name}"]`);
+                    if (element && !element.value.trim()) {
+                        addError(element, field.message);
+                        isValid = false;
+                    }
+                });
+
+                // Gender validation
+                const genderChecked = form.querySelector('input[name="gender"]:checked');
+                if (!genderChecked) {
+                    const genderContainer = form.querySelector('input[name="gender"]').closest('div');
+                    addError(genderContainer.querySelector('input'), 'Please select a gender.');
+                    isValid = false;
+                }
+
+                // Commission type validation
+                const commissionTypeChecked = form.querySelector('input[name="commission_type"]:checked');
+                if (!commissionTypeChecked) {
+                    const commissionContainer = form.querySelector('input[name="commission_type"]').closest(
+                        'div');
+                    addError(commissionContainer.querySelector('input'),
+                        'Please select a commission type.');
+                    isValid = false;
+                }
+
+                // Email validation
+                const emailField = form.querySelector('[name="email"]');
+                if (emailField && emailField.value) {
+                    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailPattern.test(emailField.value)) {
+                        addError(emailField, 'Please enter a valid email address.');
+                        isValid = false;
+                    }
+                }
+
+                // Mobile validation
+                const mobileField = form.querySelector('[name="mobile"]');
+                if (mobileField && mobileField.value) {
+                    if (!/^\d{10}$/.test(mobileField.value)) {
+                        addError(mobileField, 'Mobile number must be exactly 10 digits.');
+                        isValid = false;
+                    }
+                }
+
+                // Date of birth validation
+                const dobField = form.querySelector('[name="dob"]');
+                if (dobField) {
+                    const dobValidation = validateDate(dobField.value, 'Date of birth');
+                    if (!dobValidation.valid) {
+                        addError(dobField, dobValidation.message);
+                        isValid = false;
+                    }
+                }
+
+                // Experience validation
+                const experienceField = form.querySelector('[name="experience"]');
+                if (experienceField) {
+                    const expValidation = validateExperience(experienceField.value, dobField?.value);
+                    if (!expValidation.valid) {
+                        addError(experienceField, expValidation.message);
+                        isValid = false;
+                    }
+                }
+
+                // Fee validations
+                const consultationFee = form.querySelector('[name="consultation_fee"]');
+                if (consultationFee) {
+                    const feeValidation = validateFee(consultationFee.value, 'Consultation fee');
+                    if (!feeValidation.valid) {
+                        addError(consultationFee, feeValidation.message);
+                        isValid = false;
+                    }
+                }
+
+                const followupFee = form.querySelector('[name="followup_fee"]');
+                if (followupFee) {
+                    const feeValidation = validateFee(followupFee.value, 'Follow-up fee');
+                    if (!feeValidation.valid) {
+                        addError(followupFee, feeValidation.message);
+                        isValid = false;
+                    }
+                }
+
+                // Commission validation
+                const commissionType = form.querySelector('input[name="commission_type"]:checked')?.value;
+                const commissionValue = form.querySelector('[name="commission_value"]')?.value;
+                if (commissionType || commissionValue) {
+                    const commissionValidation = validateCommission(commissionType, commissionValue);
+                    if (!commissionValidation.valid) {
+                        const commissionField = form.querySelector('[name="commission_value"]');
+                        addError(commissionField, commissionValidation.message);
+                        isValid = false;
+                    }
+                }
+
+                // Time validation
+                const morningFrom = form.querySelector('[name="morning_from"]')?.value;
+                const morningTo = form.querySelector('[name="morning_to"]')?.value;
+                const morningValidation = validateTimeRange(morningFrom, morningTo, 'Morning shift');
+                if (!morningValidation.valid) {
+                    const morningToField = form.querySelector('[name="morning_to"]');
+                    addError(morningToField, morningValidation.message);
+                    isValid = false;
+                }
+
+                const eveningFrom = form.querySelector('[name="evening_from"]')?.value;
+                const eveningTo = form.querySelector('[name="evening_to"]')?.value;
+                const eveningValidation = validateTimeRange(eveningFrom, eveningTo, 'Evening shift');
+                if (!eveningValidation.valid) {
+                    const eveningToField = form.querySelector('[name="evening_to"]');
+                    addError(eveningToField, eveningValidation.message);
+                    isValid = false;
+                }
+
+                // Photo validation
+                const photoInput = form.querySelector('#photo');
+                const photoWrapper = document.getElementById('photo-wrapper');
+                const photoBorder = document.getElementById('photo-border');
+
+                if (!photoInput?.files || photoInput.files.length === 0) {
+                    isValid = false;
+                    photoBorder.classList.add("border-red-500");
+                    if (!photoWrapper.querySelector(".error-text")) {
+                        const error = document.createElement("p");
+                        error.className = "error-text text-red-500 text-sm mt-2 text-center";
+                        error.innerText = "Doctor photo is required.";
+                        photoWrapper.appendChild(error);
+                    }
+                }
+
+                // Available days validation
+                const availableDays = form.querySelectorAll('input[name="available_days[]"]');
+                const daysContainer = document.getElementById('available-days-container');
+                const daysWrapper = document.getElementById('available-days-wrapper');
+
+                if (![...availableDays].some(cb => cb.checked)) {
+                    isValid = false;
+                    daysWrapper.classList.add("border", "border-red-500", "rounded-md", "p-2");
+                    if (!daysContainer.querySelector(".error-text")) {
+                        const error = document.createElement("p");
+                        error.className = "error-text text-red-500 text-sm mt-1";
+                        error.innerText = "Please select at least one available day.";
+                        daysContainer.appendChild(error);
+                    }
+                }
+
+                // Expertise areas validation
+                const expertiseAreas = form.querySelectorAll('input[name="expertise_areas[]"]');
+                if (![...expertiseAreas].some(cb => cb.checked)) {
+                    isValid = false;
+                    const expertiseContainer = expertiseAreas[0]?.closest('.mb-4') || expertiseAreas[0]
+                        ?.closest('div');
+                    if (expertiseContainer && !expertiseContainer.querySelector(".error-text")) {
+                        const error = document.createElement("p");
+                        error.className = "error-text text-red-500 text-sm mt-1";
+                        error.innerText = "Please select at least one expertise area.";
+                        expertiseContainer.appendChild(error);
+                    }
+                }
+
+                // Panchkarma treatments validation
+                const treatments = form.querySelectorAll('input[name="panchkarma_treatments[]"]');
+                if (![...treatments].some(cb => cb.checked)) {
+                    isValid = false;
+                    const treatmentContainer = treatments[0]?.closest('div');
+                    if (treatmentContainer && !treatmentContainer.querySelector(".error-text")) {
+                        const error = document.createElement("p");
+                        error.className = "error-text text-red-500 text-sm mt-1";
+                        error.innerText = "Please select at least one panchkarma treatment.";
+                        treatmentContainer.appendChild(error);
+                    }
+                }
+
+                // Document validations
+                const degreeInput = form.querySelector('[name="degree_certificate"]');
+                const degreeBox = document.getElementById("degree-certificate-box");
+                const degreeContainer = document.getElementById("degree-certificate-container");
+
+                if (!degreeInput?.files || degreeInput.files.length === 0) {
+                    isValid = false;
+                    degreeBox.classList.add("border-red-500");
+                    if (!degreeContainer.querySelector(".error-text")) {
+                        const error = document.createElement("p");
+                        error.className = "error-text text-red-500 text-sm mt-1";
+                        error.innerText = "Degree certificate is required.";
+                        degreeContainer.appendChild(error);
+                    }
+                }
+
+                const regInput = form.querySelector('[name="registration_certificate"]');
+                const regBox = document.getElementById("registration-certificate-box");
+                const regContainer = document.getElementById("registration-certificate-container");
+
+                if (!regInput?.files || regInput.files.length === 0) {
+                    isValid = false;
+                    regBox.classList.add("border-red-500");
+                    if (!regContainer.querySelector(".error-text")) {
+                        const error = document.createElement("p");
+                        error.className = "error-text text-red-500 text-sm mt-1";
+                        error.innerText = "Registration certificate is required.";
+                        regContainer.appendChild(error);
+                    }
+                }
+
+                // Cross-validation: Follow-up fee should not exceed consultation fee
+                if (consultationFee?.value && followupFee?.value) {
+                    const consultationAmount = parseFloat(consultationFee.value);
+                    const followupAmount = parseFloat(followupFee.value);
+
+                    if (followupAmount > consultationAmount) {
+                        addError(followupFee, 'Follow-up fee should not exceed consultation fee.');
+                        isValid = false;
+                    }
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    // Scroll to first error
+                    const firstError = form.querySelector('.error-text');
+                    if (firstError) {
+                        firstError.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                }
+            });
         });
     </script>
 @endsection

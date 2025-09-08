@@ -168,4 +168,10 @@ class TreatmentPlan extends Model
     {
         return $this->herbs->pluck('name')->implode(', ');
     }
+
+    // Relationship with therapist assignments
+    public function therapistAssignments()
+    {
+        return $this->hasMany(TherapistAssignment::class);
+    }
 }

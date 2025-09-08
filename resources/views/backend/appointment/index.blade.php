@@ -6,18 +6,18 @@
             position: relative;
         }
 
-        .error-field::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 1px solid #ef4444;
-            border-radius: 0.375rem;
-            pointer-events: none;
-            animation: errorPulse 0.5s ease-in-out;
-        }
+        /* .error-field::after {
+                                                                    content: '';
+                                                                    position: absolute;
+                                                                    top: 0;
+                                                                    left: 0;
+                                                                    right: 0;
+                                                                    bottom: 0;
+                                                                    border: 1px solid #ef4444;
+                                                                    border-radius: 0.375rem;
+                                                                    pointer-events: none;
+                                                                    animation: errorPulse 0.5s ease-in-out;
+                                                                } */
 
         @keyframes errorPulse {
             0% {
@@ -336,21 +336,6 @@
                                     class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden">
                                 </div>
                             </div>
-                            <!-- Debug button for testing -->
-                            <div class="mt-2 flex space-x-2">
-                                <button type="button" id="testPatientSearch"
-                                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border">
-                                    <i class="fa-solid fa-bug mr-1"></i> Test Search
-                                </button>
-                                <button type="button" id="testPatientRoute"
-                                    class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded border">
-                                    <i class="fa-solid fa-route mr-1"></i> Test Route
-                                </button>
-                                <button type="button" id="clearPatientSearch"
-                                    class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded border">
-                                    <i class="fa-solid fa-times mr-1"></i> Clear
-                                </button>
-                            </div>
                             <!-- Patient validation error message -->
                             <p class="mt-1 text-sm text-red-600 js-error" id="patient_id-error" style="display:none"></p>
                             @error('patient_id')
@@ -361,8 +346,7 @@
                         <div id="patientInfo" class="border rounded-md p-4 bg-ayur-offwhite hidden">
                             <div class="flex items-center mb-2">
                                 <img id="patientPhoto" class="h-10 w-10 rounded-full mr-3"
-                                    src="{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
-                                    alt="Patient avatar">
+                                    src="{{ asset('backend-assets/media/uploads/download (3).png') }}" alt="Patient avatar">
                                 <div>
                                     <h5 id="patientName" class="font-medium text-ayur-brown-800"></h5>
                                     <p id="patientDetails" class="text-xs text-ayur-brown-600"></p>
@@ -709,24 +693,25 @@
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8">
                                             <img class="h-8 w-8 rounded-full object-cover"
-                                                src="{{ $appointment->patient->photo_path ? asset($appointment->patient->photo_path) : asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
-                                                alt="{{ $appointment->patient->name ?? 'Patient' }}"
-                                                onerror="this.src='{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}'">
+                                                src="{{ $appointment->patient && $appointment->patient->photo_path ? asset($appointment->patient->photo_path) : asset('backend-assets/media/uploads/download (3).png') }}"
+                                                alt="{{ $appointment->patient ? $appointment->patient->name : 'Patient' }}"
+                                                onerror="this.src='{{ asset('backend-assets/media/uploads/download (3).png') }}'">
                                         </div>
                                         <div class="ml-4">
                                             <div class="text-sm font-medium text-ayur-brown-800">
-                                                {{ $appointment->patient->name ?? 'N/A' }}</div>
+                                                {{ $appointment->patient ? $appointment->patient->name : 'N/A' }}</div>
                                             <div class="text-xs text-ayur-brown-600">
-                                                {{ $appointment->patient->patient_id ?? 'N/A' }} •
-                                                {{ $appointment->patient->age ?? 'N/A' }}/{{ $appointment->patient->gender ?? 'N/A' }}
+                                                {{ $appointment->patient ? $appointment->patient->patient_id : 'N/A' }} •
+                                                {{ $appointment->patient ? $appointment->patient->age : 'N/A' }}/{{ $appointment->patient ? $appointment->patient->gender : 'N/A' }}
                                             </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-ayur-brown-800">
-                                        {{ $appointment->doctor->full_name ?? 'N/A' }}</div>
-                                    <div class="text-xs text-ayur-brown-600">{{ $appointment->department->name ?? 'N/A' }}
+                                        {{ $appointment->doctor ? $appointment->doctor->full_name : 'N/A' }}</div>
+                                    <div class="text-xs text-ayur-brown-600">
+                                        {{ $appointment->department ? $appointment->department->name : 'N/A' }}
                                     </div>
                                 </td>
 
@@ -833,10 +818,10 @@
                 }
 
                 // Add error styling to the field container
-                const fieldContainer = getFieldContainer(fieldName);
-                if (fieldContainer) {
-                    fieldContainer.classList.add('error-field');
-                }
+                // const fieldContainer = getFieldContainer(fieldName);
+                // if (fieldContainer) {
+                //     fieldContainer.classList.add('error-field');
+                // }
             }
 
             function clearError(fieldName) {
@@ -1209,9 +1194,9 @@
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-8 w-8 mr-3">
                                     <img class="h-8 w-8 rounded-full object-cover" 
-                                         src="${safePhotoPath ? '{{ asset('') }}' + safePhotoPath : '{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}'}" 
+                                         src="${safePhotoPath ? '{{ asset('') }}' + safePhotoPath : '{{ asset('backend-assets/media/uploads/download (3).png') }}'}" 
                                          alt="Patient avatar"
-                                         onerror="this.src='{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}'">
+                                         onerror="this.src='{{ asset('backend-assets/media/uploads/download (3).png') }}'">
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="text-sm font-medium text-gray-900 truncate">${safeName}</div>
@@ -1264,11 +1249,11 @@
                             // Add error handling for image
                             patientPhotoEl.onerror = function() {
                                 this.src =
-                                    '{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}';
+                                    '{{ asset('backend-assets/media/uploads/download (3).png') }}';
                             };
                         } else {
                             patientPhotoEl.src =
-                                '{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}';
+                                '{{ asset('backend-assets/media/uploads/download (3).png') }}';
                         }
                     }
 
@@ -1499,11 +1484,11 @@
                                 <h6 class="text-sm font-medium text-ayur-brown-800 mb-2">Morning (${doctorSchedule.morning_from} - ${doctorSchedule.morning_to})</h6>
                                 <div class="grid grid-cols-4 gap-2">
                                     ${timeSlots.morning.map(slot => `
-                                                                                    <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
-                                                                                        <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
-                                                                                        ${slot.formatted_time || slot.time}
-                                                                                    </label>
-                                                                                `).join('')}
+                                                                                                                                                                                            <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
+                                                                                                                                                                                                <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
+                                                                                                                                                                                                ${slot.formatted_time || slot.time}
+                                                                                                                                                                                            </label>
+                                                                                                                                                                                        `).join('')}
                                 </div>
                             </div>
                         `;
@@ -1520,11 +1505,10 @@
                                 <h6 class="text-sm font-medium text-ayur-brown-800 mb-2">Evening (${doctorSchedule.evening_from} - ${doctorSchedule.evening_to})</h6>
                                 <div class="grid grid-cols-4 gap-2">
                                     ${timeSlots.evening.map(slot => `
-                                                                                    <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
-                                                                                        <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
-                                                                                        ${slot.formatted_time || slot.time}
-                                                                                    </label>
-                                                                                `).join('')}
+                                                                                                                <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
+                                                                                                                    <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
+                                                                                                                    ${slot.formatted_time || slot.time}
+                                                                                                                </label> `).join('')}
                                 </div>
                             </div>
                         `;
@@ -1608,6 +1592,91 @@
                 }
             }
 
+            // Load doctors by department
+            function loadDoctorsByDepartment(departmentId) {
+                const doctorSelect = document.querySelector('select[name="doctor_id"]');
+
+                console.log('Loading doctors for department:', departmentId);
+
+                if (!departmentId) {
+                    // Reset doctor dropdown to show all doctors
+                    doctorSelect.innerHTML = '<option value="">Select Doctor</option>';
+                    @foreach ($doctors ?? [] as $doc)
+                        doctorSelect.innerHTML +=
+                            '<option value="{{ $doc->id }}">{{ $doc->full_name }}</option>';
+                    @endforeach
+                    return;
+                }
+
+                // Show loading state
+                doctorSelect.innerHTML = '<option value="">Loading doctors...</option>';
+                doctorSelect.disabled = true;
+
+                const url = `{{ route('appointment.doctors-by-department') }}?department_id=${departmentId}`;
+
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Doctors loaded:', data);
+
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        // Clear and populate doctor dropdown
+                        doctorSelect.innerHTML = '<option value="">Select Doctor</option>';
+
+                        if (data.doctors && data.doctors.length > 0) {
+                            data.doctors.forEach(doctor => {
+                                const option = document.createElement('option');
+                                option.value = doctor.id;
+                                option.textContent = doctor.full_name;
+                                doctorSelect.appendChild(option);
+                            });
+                        } else {
+                            doctorSelect.innerHTML +=
+                                '<option value="" disabled>No doctors found for this department</option>';
+                        }
+
+                        doctorSelect.disabled = false;
+
+                        // Clear time slots when department changes
+                        clearTimeSlots();
+                    })
+                    .catch(error => {
+                        console.error('Error loading doctors:', error);
+                        doctorSelect.innerHTML = '<option value="">Error loading doctors</option>';
+                        doctorSelect.disabled = false;
+
+                        // Show error message
+                        alert('Error loading doctors: ' + error.message);
+                    });
+            }
+
+            // Clear time slots
+            function clearTimeSlots() {
+                const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+                if (timeSlotsContainer) {
+                    timeSlotsContainer.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fa-solid fa-clock text-2xl mb-2"></i>
+                            <p>Please select a doctor and date to view available time slots</p>
+                        </div>
+                    `;
+                }
+
+                // Reset schedule info
+                const scheduleInfo = document.getElementById('doctorScheduleInfo');
+                if (scheduleInfo) {
+                    scheduleInfo.textContent = 'Select Doctor and Date';
+                }
+            }
+
             // Add event listeners for form changes
             document.querySelector('select[name="department_id"]').addEventListener('change', function() {
                 clearError('department_id');
@@ -1616,6 +1685,9 @@
                 this.classList.add('border-gray-300');
                 // Real-time validation
                 validateField('department_id');
+
+                // Load doctors for selected department
+                loadDoctorsByDepartment(this.value);
             });
 
             document.querySelector('select[name="doctor_id"]').addEventListener('change', function() {
@@ -1775,22 +1847,8 @@
                 e.preventDefault();
 
                 if (validate()) {
-                    // Show confirmation dialog
-                    Swal.fire({
-                        title: 'Confirm Appointment',
-                        text: 'Are you sure you want to book this appointment?',
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonColor: '#059669',
-                        cancelButtonColor: '#6B7280',
-                        confirmButtonText: 'Yes, Book Appointment',
-                        cancelButtonText: 'Cancel'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Submit the form
-                            this.submit();
-                        }
-                    });
+                    // Submit the form directly without confirmation
+                    this.submit();
                 } else {
                     // Scroll to first error
                     const firstError = document.querySelector('.js-error[style*="display: block"]');
@@ -1866,6 +1924,15 @@
                         `;
                     }
                 }
+
+                // Reset doctor dropdown to show all doctors
+                const doctorSelect = document.querySelector('select[name="doctor_id"]');
+                doctorSelect.innerHTML = '<option value="">Select Doctor</option>';
+                @foreach ($doctors ?? [] as $doc)
+                    doctorSelect.innerHTML +=
+                        '<option value="{{ $doc->id }}">{{ $doc->full_name }}</option>';
+                @endforeach
+                doctorSelect.disabled = false;
 
                 // Clear all validation errors
                 clearError('patient_id');
@@ -1946,75 +2013,75 @@
             handleServerSideErrors();
 
             // Test button for patient search
-            const testPatientSearchBtn = document.getElementById('testPatientSearch');
-            if (testPatientSearchBtn) {
-                testPatientSearchBtn.addEventListener('click', function() {
-                    console.log('Testing patient search...');
-                    const testQueries = ['AYR', 'test', 'john', '123'];
-                    const randomQuery = testQueries[Math.floor(Math.random() * testQueries.length)];
+            // const testPatientSearchBtn = document.getElementById('testPatientSearch');
+            // if (testPatientSearchBtn) {
+            //     testPatientSearchBtn.addEventListener('click', function() {
+            //         console.log('Testing patient search...');
+            //         const testQueries = ['AYR', 'test', 'john', '123'];
+            //         const randomQuery = testQueries[Math.floor(Math.random() * testQueries.length)];
 
-                    if (patientSearch) {
-                        patientSearch.value = randomQuery;
-                        patientSearch.dispatchEvent(new Event('input'));
-                        console.log('Test query set:', randomQuery);
-                    }
-                });
-            }
+            //         if (patientSearch) {
+            //             patientSearch.value = randomQuery;
+            //             patientSearch.dispatchEvent(new Event('input'));
+            //             console.log('Test query set:', randomQuery);
+            //         }
+            //     });
+            // }
 
             // Test button for patient search route
-            const testPatientRouteBtn = document.getElementById('testPatientRoute');
-            if (testPatientRouteBtn) {
-                testPatientRouteBtn.addEventListener('click', function() {
-                    console.log('Testing patient search route...');
+            // const testPatientRouteBtn = document.getElementById('testPatientRoute');
+            // if (testPatientRouteBtn) {
+            //     testPatientRouteBtn.addEventListener('click', function() {
+            //         console.log('Testing patient search route...');
 
-                    fetch('{{ route('appointment.test-search') }}', {
-                            method: 'GET',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json',
-                            },
-                            credentials: 'same-origin'
-                        })
-                        .then(response => {
-                            console.log('Test route response status:', response.status);
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log('Test route response:', data);
-                            alert(
-                                `Route test result: ${data.status}\nMessage: ${data.message}\nPatient count: ${data.patient_count || 'N/A'}`
-                            );
-                        })
-                        .catch(error => {
-                            console.error('Test route error:', error);
-                            alert(`Route test failed: ${error.message}`);
-                        });
-                });
-            }
+            //         fetch('{{ route('appointment.test-search') }}', {
+            //                 method: 'GET',
+            //                 headers: {
+            //                     'X-Requested-With': 'XMLHttpRequest',
+            //                     'Accept': 'application/json',
+            //                 },
+            //                 credentials: 'same-origin'
+            //             })
+            //             .then(response => {
+            //                 console.log('Test route response status:', response.status);
+            //                 return response.json();
+            //             })
+            //             .then(data => {
+            //                 console.log('Test route response:', data);
+            //                 alert(
+            //                     `Route test result: ${data.status}\nMessage: ${data.message}\nPatient count: ${data.patient_count || 'N/A'}`
+            //                 );
+            //             })
+            //             .catch(error => {
+            //                 console.error('Test route error:', error);
+            //                 alert(`Route test failed: ${error.message}`);
+            //             });
+            //     });
+            // }
 
             // Clear patient search button
-            const clearPatientSearchBtn = document.getElementById('clearPatientSearch');
-            if (clearPatientSearchBtn) {
-                clearPatientSearchBtn.addEventListener('click', function() {
-                    console.log('Clearing patient search...');
-                    if (patientSearch) {
-                        patientSearch.value = '';
-                    }
-                    if (selectedPatientId) {
-                        selectedPatientId.value = '';
-                    }
-                    if (patientInfo) {
-                        patientInfo.classList.add('hidden');
-                    }
-                    if (noPatientSelected) {
-                        noPatientSelected.classList.remove('hidden');
-                    }
-                    if (searchResults) {
-                        searchResults.classList.add('hidden');
-                    }
-                    clearError('patient_id');
-                });
-            }
+            // const clearPatientSearchBtn = document.getElementById('clearPatientSearch');
+            // if (clearPatientSearchBtn) {
+            //     clearPatientSearchBtn.addEventListener('click', function() {
+            //         console.log('Clearing patient search...');
+            //         if (patientSearch) {
+            //             patientSearch.value = '';
+            //         }
+            //         if (selectedPatientId) {
+            //             selectedPatientId.value = '';
+            //         }
+            //         if (patientInfo) {
+            //             patientInfo.classList.add('hidden');
+            //         }
+            //         if (noPatientSelected) {
+            //             noPatientSelected.classList.remove('hidden');
+            //         }
+            //         if (searchResults) {
+            //             searchResults.classList.add('hidden');
+            //         }
+            //         clearError('patient_id');
+            //     });
+            // }
 
             // Test button for time slots
             const testTimeSlotsBtn = document.getElementById('testTimeSlots');
@@ -2099,7 +2166,7 @@
                             .photo_path;
                     } else {
                         document.getElementById('patientPhoto').src =
-                            '{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}';
+                            '{{ asset('backend-assets/media/uploads/download (3).png') }}';
                     }
 
                     // Show patient info, hide placeholder

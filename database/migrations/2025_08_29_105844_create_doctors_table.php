@@ -25,7 +25,7 @@ return new class extends Migration
             $table->decimal('followup_fee', 8, 2)->nullable();
             $table->enum('commission_type', ['Fixed', 'Percentage'])->default('Percentage');
             $table->decimal('commission_value', 8, 2)->nullable();
-            $table->json('available_days')->nullable();
+            $table->text('available_days')->nullable();
             $table->time('morning_from')->nullable();
             $table->time('morning_to')->nullable();
             $table->time('evening_from')->nullable();

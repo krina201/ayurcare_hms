@@ -38,7 +38,7 @@
                         <select id="departmentFilter"
                             class="block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border">
                             <option value="">All Departments</option>
-                            @foreach($departments as $dept)
+                            @foreach ($departments as $dept)
                                 <option value="{{ $dept->id }}">{{ $dept->name }}</option>
                             @endforeach
                         </select>
@@ -102,7 +102,8 @@
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                     <h3 id="calendarTitle" class="text-lg font-semibold text-ayur-brown-800">
-                        {{ \Carbon\Carbon::parse($today)->startOfWeek()->format('M d') }} - {{ \Carbon\Carbon::parse($today)->endOfWeek()->format('M d, Y') }}
+                        {{ \Carbon\Carbon::parse($today)->startOfWeek()->format('M d') }} -
+                        {{ \Carbon\Carbon::parse($today)->endOfWeek()->format('M d, Y') }}
                     </h3>
                     <button id="nextWeek" class="text-ayur-brown-700 hover:text-ayur-brown-900">
                         <i class="fa-solid fa-chevron-right"></i>
@@ -123,12 +124,13 @@
                 </div>
 
                 <!-- Doctor Column Headers -->
-                <div class="flex-1 grid" id="doctorHeaders" style="grid-template-columns: repeat({{ $doctors->count() }}, 1fr);">
-                    @foreach($doctors as $doctor)
+                <div class="flex-1 grid" id="doctorHeaders"
+                    style="grid-template-columns: repeat({{ $doctors->count() }}, 1fr);">
+                    @foreach ($doctors as $doctor)
                         <div class="h-12 border-b border-r border-gray-200 flex flex-col items-center justify-center p-1">
                             <div class="flex items-center">
                                 <img class="h-6 w-6 rounded-full mr-1"
-                                    src="{{ $doctor->photo_path ? asset($doctor->photo_path) : asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
+                                    src="{{ $doctor->photo_path ? asset($doctor->photo_path) : asset('backend-assets/media/uploads/patient/patient_20250825104721_ggatR2.jpg') }}"
                                     alt="Doctor avatar">
                                 <span class="text-xs font-medium text-ayur-brown-800">{{ $doctor->full_name }}</span>
                             </div>
@@ -142,11 +144,12 @@
             <div class="flex" style="height: 600px; overflow-y: auto;">
                 <!-- Time Column -->
                 <div class="w-24 flex flex-col border-r border-gray-200">
-                    @for($hour = 9; $hour <= 18; $hour++)
-                        @for($minute = 0; $minute < 60; $minute += 30)
+                    @for ($hour = 9; $hour <= 18; $hour++)
+                        @for ($minute = 0; $minute < 60; $minute += 30)
                             <div class="h-16 border-b border-gray-200 flex items-center justify-center">
                                 <span class="text-xs text-ayur-brown-600">
-                                    {{ $hour > 12 ? $hour - 12 : $hour }}:{{ $minute == 0 ? '00' : $minute }} {{ $hour >= 12 ? 'PM' : 'AM' }}
+                                    {{ $hour > 12 ? $hour - 12 : $hour }}:{{ $minute == 0 ? '00' : $minute }}
+                                    {{ $hour >= 12 ? 'PM' : 'AM' }}
                                 </span>
                             </div>
                         @endfor
@@ -154,33 +157,39 @@
                 </div>
 
                 <!-- Calendar Slots -->
-                <div class="flex-1 grid" id="calendarSlots" style="grid-template-columns: repeat({{ $doctors->count() }}, 1fr);">
-                    @foreach($doctors as $doctorIndex => $doctor)
+                <div class="flex-1 grid" id="calendarSlots"
+                    style="grid-template-columns: repeat({{ $doctors->count() }}, 1fr);">
+                    @foreach ($doctors as $doctorIndex => $doctor)
                         <div class="border-r border-gray-200 relative" data-doctor-id="{{ $doctor->id }}">
                             <!-- Current time indicator -->
-                            <div class="absolute w-full border-t-2 border-red-400 top-[120px] z-10 flex items-center" id="currentTimeIndicator-{{ $doctor->id }}" style="display: none;">
+                            <div class="absolute w-full border-t-2 border-red-400 top-[120px] z-10 flex items-center"
+                                id="currentTimeIndicator-{{ $doctor->id }}" style="display: none;">
                                 <div class="w-3 h-3 rounded-full bg-red-500 -ml-1.5 -mt-1.5"></div>
-                                <span class="text-xs text-red-500 ml-1 bg-white px-1" id="currentTimeText-{{ $doctor->id }}"></span>
+                                <span class="text-xs text-red-500 ml-1 bg-white px-1"
+                                    id="currentTimeText-{{ $doctor->id }}"></span>
                             </div>
 
-                            @for($hour = 9; $hour <= 18; $hour++)
-                                @for($minute = 0; $minute < 60; $minute += 30)
+                            @for ($hour = 9; $hour <= 18; $hour++)
+                                @for ($minute = 0; $minute < 60; $minute += 30)
                                     @php
                                         $timeSlot = sprintf('%02d:%02d', $hour, $minute);
-                                        $appointment = $weekAppointments->where('doctor_id', $doctor->id)
+                                        $appointment = $weekAppointments
+                                            ->where('doctor_id', $doctor->id)
                                             ->where('appointment_time', $timeSlot)
                                             ->first();
                                     @endphp
-                                    
+
                                     <div class="h-16 border-b border-gray-200 relative" data-time="{{ $timeSlot }}">
-                                        @if($appointment)
-                                            <div class="absolute inset-0.5 rounded p-1 flex flex-col 
+                                        @if ($appointment)
+                                            <div
+                                                class="absolute inset-0.5 rounded p-1 flex flex-col 
                                                 {{ $appointment->mode === 'Panchkarma' ? 'bg-blue-100' : 'bg-ayur-yellow-100' }}">
                                                 <div class="flex justify-between items-start">
                                                     <span class="text-xs font-medium text-ayur-brown-800">
                                                         {{ $appointment->patient->full_name ?? 'N/A' }}
                                                     </span>
-                                                    <span class="text-xs {{ $appointment->mode === 'Panchkarma' ? 'bg-blue-500' : 'bg-ayur-yellow-500' }} text-white px-1 rounded">
+                                                    <span
+                                                        class="text-xs {{ $appointment->mode === 'Panchkarma' ? 'bg-blue-500' : 'bg-ayur-yellow-500' }} text-white px-1 rounded">
                                                         {{ $timeSlot }}
                                                     </span>
                                                 </div>
@@ -190,47 +199,62 @@
                                             </div>
                                         @else
                                             <!-- Add sample appointments for demonstration -->
-                                            @if($doctorIndex === 0 && $hour === 9 && $minute === 30)
-                                                <div class="absolute inset-0.5 bg-ayur-yellow-100 rounded p-1 flex flex-col">
+                                            @if ($doctorIndex === 0 && $hour === 9 && $minute === 30)
+                                                <div
+                                                    class="absolute inset-0.5 bg-ayur-yellow-100 rounded p-1 flex flex-col">
                                                     <div class="flex justify-between items-start">
-                                                        <span class="text-xs font-medium text-ayur-brown-800">Priya Sharma</span>
-                                                        <span class="text-xs bg-ayur-yellow-500 text-white px-1 rounded">9:30-10:00</span>
+                                                        <span class="text-xs font-medium text-ayur-brown-800">Priya
+                                                            Sharma</span>
+                                                        <span
+                                                            class="text-xs bg-ayur-yellow-500 text-white px-1 rounded">9:30-10:00</span>
                                                     </div>
                                                     <span class="text-xs text-ayur-brown-600">Consultation</span>
                                                 </div>
                                             @elseif($doctorIndex === 0 && $hour === 10 && $minute === 30)
                                                 <div class="absolute inset-0.5 bg-blue-100 rounded p-1 flex flex-col">
                                                     <div class="flex justify-between items-start">
-                                                        <span class="text-xs font-medium text-ayur-brown-800">Rajesh Kumar</span>
-                                                        <span class="text-xs bg-blue-500 text-white px-1 rounded">10:30-11:30</span>
+                                                        <span class="text-xs font-medium text-ayur-brown-800">Rajesh
+                                                            Kumar</span>
+                                                        <span
+                                                            class="text-xs bg-blue-500 text-white px-1 rounded">10:30-11:30</span>
                                                     </div>
                                                     <span class="text-xs text-ayur-brown-600">Abhyanga</span>
                                                 </div>
                                             @elseif($doctorIndex === 0 && $hour === 12 && $minute === 0)
-                                                <div class="absolute inset-0.5 bg-ayur-brown-200 rounded p-1 flex flex-col">
-                                                    <span class="text-xs font-medium text-ayur-brown-800 text-center">Lunch Break</span>
+                                                <div
+                                                    class="absolute inset-0.5 bg-ayur-brown-200 rounded p-1 flex flex-col">
+                                                    <span class="text-xs font-medium text-ayur-brown-800 text-center">Lunch
+                                                        Break</span>
                                                 </div>
                                             @elseif($doctorIndex === 1 && $hour === 9 && $minute === 0)
-                                                <div class="absolute inset-0.5 bg-ayur-yellow-100 rounded p-1 flex flex-col">
+                                                <div
+                                                    class="absolute inset-0.5 bg-ayur-yellow-100 rounded p-1 flex flex-col">
                                                     <div class="flex justify-between items-start">
-                                                        <span class="text-xs font-medium text-ayur-brown-800">Arjun Desai</span>
-                                                        <span class="text-xs bg-ayur-yellow-500 text-white px-1 rounded">9:00-9:30</span>
+                                                        <span class="text-xs font-medium text-ayur-brown-800">Arjun
+                                                            Desai</span>
+                                                        <span
+                                                            class="text-xs bg-ayur-yellow-500 text-white px-1 rounded">9:00-9:30</span>
                                                     </div>
                                                     <span class="text-xs text-ayur-brown-600">Consultation</span>
                                                 </div>
                                             @elseif($doctorIndex === 1 && $hour === 10 && $minute === 0)
                                                 <div class="absolute inset-0.5 bg-blue-100 rounded p-1 flex flex-col">
                                                     <div class="flex justify-between items-start">
-                                                        <span class="text-xs font-medium text-ayur-brown-800">Anita Gupta</span>
-                                                        <span class="text-xs bg-blue-500 text-white px-1 rounded">10:00-11:00</span>
+                                                        <span class="text-xs font-medium text-ayur-brown-800">Anita
+                                                            Gupta</span>
+                                                        <span
+                                                            class="text-xs bg-blue-500 text-white px-1 rounded">10:00-11:00</span>
                                                     </div>
                                                     <span class="text-xs text-ayur-brown-600">Shirodhara</span>
                                                 </div>
                                             @elseif($doctorIndex === 2 && $hour === 9 && $minute === 30)
-                                                <div class="absolute inset-0.5 bg-ayur-yellow-100 rounded p-1 flex flex-col">
+                                                <div
+                                                    class="absolute inset-0.5 bg-ayur-yellow-100 rounded p-1 flex flex-col">
                                                     <div class="flex justify-between items-start">
-                                                        <span class="text-xs font-medium text-ayur-brown-800">Kavita Shah</span>
-                                                        <span class="text-xs bg-ayur-yellow-500 text-white px-1 rounded">9:30-10:00</span>
+                                                        <span class="text-xs font-medium text-ayur-brown-800">Kavita
+                                                            Shah</span>
+                                                        <span
+                                                            class="text-xs bg-ayur-yellow-500 text-white px-1 rounded">9:30-10:00</span>
                                                     </div>
                                                     <span class="text-xs text-ayur-brown-600">Consultation</span>
                                                 </div>
@@ -259,10 +283,18 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-red-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">Doctor</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">Time Slot</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">Patients</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">Actions</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">
+                                Doctor</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">Time
+                                Slot</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">
+                                Patients</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-red-800 uppercase tracking-wider">
+                                Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -271,7 +303,7 @@
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-8 w-8">
                                         <img class="h-8 w-8 rounded-full"
-                                            src="{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
+                                            src="{{ asset('backend-assets/media/uploads/patient/patient_20250825104721_ggatR2.jpg') }}"
                                             alt="">
                                     </div>
                                     <div class="ml-4">
@@ -313,12 +345,24 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-ayur-offwhite">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">Time</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">Patient</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">Doctor</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">Service</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">Actions</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
+                                Time</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
+                                Patient</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
+                                Doctor</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
+                                Service</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
+                                Status</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-ayur-brown-600 uppercase tracking-wider">
+                                Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200" id="todayAppointmentsTable">
@@ -331,30 +375,41 @@
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8">
                                             <img class="h-8 w-8 rounded-full"
-                                                src="{{ $appointment->patient->photo_path ? asset($appointment->patient->photo_path) : asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
+                                                src="{{ $appointment->patient->photo_path ? asset($appointment->patient->photo_path) : asset('backend-assets/media/uploads/patient/patient_20250825104721_ggatR2.jpg') }}"
                                                 alt="">
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-ayur-brown-800">{{ $appointment->patient->full_name ?? 'N/A' }}</div>
-                                            <div class="text-xs text-ayur-brown-600">UHID: {{ $appointment->patient->uhid ?? 'N/A' }}</div>
+                                            <div class="text-sm font-medium text-ayur-brown-800">
+                                                {{ $appointment->patient->full_name ?? 'N/A' }}</div>
+                                            <div class="text-xs text-ayur-brown-600">UHID:
+                                                {{ $appointment->patient->uhid ?? 'N/A' }}</div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">{{ $appointment->doctor->full_name ?? 'N/A' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">{{ $appointment->appointment_type ?? 'N/A' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                    {{ $appointment->doctor->full_name ?? 'N/A' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                    {{ $appointment->appointment_type ?? 'N/A' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                        {{ $appointment->status === 'Waiting' ? 'bg-ayur-yellow-100 text-ayur-yellow-800' : 
-                                           ($appointment->status === 'In Progress' ? 'bg-blue-100 text-blue-800' : 
-                                           ($appointment->status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')) }}">
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                        {{ $appointment->status === 'Waiting'
+                                            ? 'bg-ayur-yellow-100 text-ayur-yellow-800'
+                                            : ($appointment->status === 'In Progress'
+                                                ? 'bg-blue-100 text-blue-800'
+                                                : ($appointment->status === 'Completed'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-gray-100 text-gray-800')) }}">
                                         {{ $appointment->status ?? 'N/A' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3" title="Start Appointment">
+                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"
+                                        title="Start Appointment">
                                         <i class="fa-solid fa-play"></i>
                                     </button>
-                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3" title="Edit Appointment">
+                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"
+                                        title="Edit Appointment">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <button class="text-red-600 hover:text-red-900" title="Cancel Appointment">
@@ -370,7 +425,7 @@
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8">
                                             <img class="h-8 w-8 rounded-full"
-                                                src="{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
+                                                src="{{ asset('backend-assets/media/uploads/patient/patient_20250825104721_ggatR2.jpg') }}"
                                                 alt="">
                                         </div>
                                         <div class="ml-4">
@@ -382,13 +437,17 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Dr. Sharma</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Abhyanga</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ayur-yellow-100 text-ayur-yellow-800">Checked In</span>
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ayur-yellow-100 text-ayur-yellow-800">Checked
+                                        In</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3" title="Start Appointment">
+                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"
+                                        title="Start Appointment">
                                         <i class="fa-solid fa-play"></i>
                                     </button>
-                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3" title="Edit Appointment">
+                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"
+                                        title="Edit Appointment">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <button class="text-red-600 hover:text-red-900" title="Cancel Appointment">
@@ -402,7 +461,7 @@
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8">
                                             <img class="h-8 w-8 rounded-full"
-                                                src="{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
+                                                src="{{ asset('backend-assets/media/uploads/patient/patient_20250825104721_ggatR2.jpg') }}"
                                                 alt="">
                                         </div>
                                         <div class="ml-4">
@@ -414,13 +473,17 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Dr. Patel</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Consultation</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Overlap Alert</span>
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Overlap
+                                        Alert</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3" title="Start Appointment">
+                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"
+                                        title="Start Appointment">
                                         <i class="fa-solid fa-clock"></i>
                                     </button>
-                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3" title="Edit Appointment">
+                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"
+                                        title="Edit Appointment">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <button class="text-red-600 hover:text-red-900" title="Cancel Appointment">
@@ -434,7 +497,7 @@
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8">
                                             <img class="h-8 w-8 rounded-full"
-                                                src="{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}"
+                                                src="{{ asset('backend-assets/media/uploads/patient/patient_20250825104721_ggatR2.jpg') }}"
                                                 alt="">
                                         </div>
                                         <div class="ml-4">
@@ -446,13 +509,16 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Dr. Reddy</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">Udvartana</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ayur-green-100 text-ayur-green-800">Confirmed</span>
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ayur-green-100 text-ayur-green-800">Confirmed</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3" title="Start Appointment">
+                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"
+                                        title="Start Appointment">
                                         <i class="fa-solid fa-check-in"></i>
                                     </button>
-                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3" title="Edit Appointment">
+                                    <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3"
+                                        title="Edit Appointment">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <button class="text-red-600 hover:text-red-900" title="Cancel Appointment">
@@ -490,19 +556,24 @@
                 </p>
 
                 <div class="space-y-3">
-                    <button class="w-full py-2 px-4 bg-ayur-yellow-500 text-white rounded-md hover:bg-ayur-yellow-600 transition">
+                    <button
+                        class="w-full py-2 px-4 bg-ayur-yellow-500 text-white rounded-md hover:bg-ayur-yellow-600 transition">
                         Reschedule appointment
                     </button>
-                    <button class="w-full py-2 px-4 bg-ayur-green-600 text-white rounded-md hover:bg-ayur-green-700 transition">
+                    <button
+                        class="w-full py-2 px-4 bg-ayur-green-600 text-white rounded-md hover:bg-ayur-green-700 transition">
                         Assign to different doctor
                     </button>
-                    <button class="w-full py-2 px-4 bg-ayur-brown-500 text-white rounded-md hover:bg-ayur-brown-600 transition">
+                    <button
+                        class="w-full py-2 px-4 bg-ayur-brown-500 text-white rounded-md hover:bg-ayur-brown-600 transition">
                         Modify treatment duration
                     </button>
                 </div>
             </div>
             <div class="p-4 bg-gray-50 rounded-b-lg flex justify-end">
-                <button class="py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-ayur-brown-700 bg-white hover:bg-gray-50 mr-2" onclick="closeOverlapModal()">
+                <button
+                    class="py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-ayur-brown-700 bg-white hover:bg-gray-50 mr-2"
+                    onclick="closeOverlapModal()">
                     Cancel
                 </button>
                 <button class="py-2 px-4 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">
@@ -573,20 +644,23 @@
             function updateCalendarDisplay() {
                 const title = document.getElementById('calendarTitle');
                 const dateInput = document.getElementById('calendarDate');
-                
+
                 if (currentView === 'week') {
                     const startOfWeek = new Date(currentDate);
                     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
                     const endOfWeek = new Date(startOfWeek);
                     endOfWeek.setDate(startOfWeek.getDate() + 6);
-                    
+
                     title.textContent = `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
                 } else if (currentView === 'day') {
                     title.textContent = formatDate(currentDate);
                 } else if (currentView === 'month') {
-                    title.textContent = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    title.textContent = currentDate.toLocaleDateString('en-US', {
+                        month: 'long',
+                        year: 'numeric'
+                    });
                 }
-                
+
                 dateInput.value = formatDateForInput(currentDate);
             }
 
@@ -594,24 +668,24 @@
                 const now = new Date();
                 const currentHour = now.getHours();
                 const currentMinute = now.getMinutes();
-                
+
                 // Calculate position based on current time
                 const startHour = 9; // Calendar starts at 9 AM
                 const totalMinutes = (currentHour - startHour) * 60 + currentMinute;
                 const position = (totalMinutes / 30) * 64; // 64px per 30-minute slot
-                
+
                 if (currentHour >= 9 && currentHour <= 18) {
                     document.querySelectorAll('[data-doctor-id]').forEach(doctorColumn => {
                         const indicator = doctorColumn.querySelector('[id^="currentTimeIndicator-"]');
                         const timeText = doctorColumn.querySelector('[id^="currentTimeText-"]');
-                        
+
                         if (indicator && timeText) {
                             indicator.style.top = `${position}px`;
                             indicator.style.display = 'flex';
-                            timeText.textContent = now.toLocaleTimeString('en-US', { 
-                                hour: 'numeric', 
+                            timeText.textContent = now.toLocaleTimeString('en-US', {
+                                hour: 'numeric',
                                 minute: '2-digit',
-                                hour12: true 
+                                hour12: true
                             });
                         }
                     });
@@ -621,8 +695,9 @@
             function loadAppointments() {
                 const departmentId = document.getElementById('departmentFilter').value;
                 const date = formatDateForInput(currentDate);
-                
-                fetch(`{{ route('appointment.calendar') }}?date=${date}&department=${departmentId}&view=${currentView}`)
+
+                fetch(
+                        `{{ route('appointment.calendar') }}?date=${date}&department=${departmentId}&view=${currentView}`)
                     .then(response => response.json())
                     .then(data => {
                         updateCalendarSlots(data.appointments);
@@ -645,13 +720,15 @@
 
                 // Add new appointments
                 appointments.forEach(appointment => {
-                    const slot = document.querySelector(`[data-doctor-id="${appointment.doctor_id}"][data-time="${appointment.appointment_time}"]`);
+                    const slot = document.querySelector(
+                        `[data-doctor-id="${appointment.doctor_id}"][data-time="${appointment.appointment_time}"]`
+                        );
                     if (slot) {
                         const appointmentDiv = document.createElement('div');
                         appointmentDiv.className = `absolute inset-0.5 rounded p-1 flex flex-col ${
                             appointment.mode === 'Panchkarma' ? 'bg-blue-100' : 'bg-ayur-yellow-100'
                         }`;
-                        
+
                         appointmentDiv.innerHTML = `
                             <div class="flex justify-between items-start">
                                 <span class="text-xs font-medium text-ayur-brown-800">${appointment.patient_name}</span>
@@ -661,7 +738,7 @@
                             </div>
                             <span class="text-xs text-ayur-brown-600">${appointment.appointment_type}</span>
                         `;
-                        
+
                         slot.appendChild(appointmentDiv);
                     }
                 });
@@ -669,7 +746,7 @@
 
             function updateTodayAppointments(appointments) {
                 const tbody = document.getElementById('todayAppointmentsTable');
-                
+
                 if (appointments.length === 0) {
                     tbody.innerHTML = `
                         <tr>
@@ -694,7 +771,7 @@
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-8 w-8">
                                     <img class="h-8 w-8 rounded-full"
-                                        src="${appointment.patient_photo || '{{ asset('backend-assets/media/uploads/products/patient_20250825104721_ggatR2.jpg') }}'}"
+                                        src="${appointment.patient_photo || '{{ asset('backend-assets/media/uploads/patient/patient_20250825104721_ggatR2.jpg') }}'}"
                                         alt="">
                                 </div>
                                 <div class="ml-4">
@@ -737,7 +814,10 @@
 
             // Utility functions
             function formatDate(date) {
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                });
             }
 
             function formatDateForInput(date) {
@@ -753,11 +833,15 @@
             }
 
             function getStatusClass(status) {
-                switch(status) {
-                    case 'Waiting': return 'bg-ayur-yellow-100 text-ayur-yellow-800';
-                    case 'In Progress': return 'bg-blue-100 text-blue-800';
-                    case 'Completed': return 'bg-green-100 text-green-800';
-                    default: return 'bg-gray-100 text-gray-800';
+                switch (status) {
+                    case 'Waiting':
+                        return 'bg-ayur-yellow-100 text-ayur-yellow-800';
+                    case 'In Progress':
+                        return 'bg-blue-100 text-blue-800';
+                    case 'Completed':
+                        return 'bg-green-100 text-green-800';
+                    default:
+                        return 'bg-gray-100 text-gray-800';
                 }
             }
         });
@@ -770,7 +854,7 @@
         function showOverlapModal(overlapData) {
             const modal = document.getElementById('overlapModal');
             const details = document.getElementById('overlapDetails');
-            
+
             details.innerHTML = `
                 <div class="font-medium">${overlapData.doctor}</div>
                 <div class="text-sm">Time: ${overlapData.time}</div>
@@ -779,7 +863,7 @@
                     ${overlapData.conflicts.map(conflict => `<li>${conflict}</li>`).join('')}
                 </ul>
             `;
-            
+
             modal.classList.remove('hidden');
         }
     </script>

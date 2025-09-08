@@ -16,14 +16,11 @@
                         class="py-2 px-4 border-b-2 {{ request()->routeIs('doctor.dashboard') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
                         Doctor Dashboard
                     </a>
-                    {{-- <a href="{{ route('therapist.assignment') }}"
-                        class="py-2 px-4 border-b-2 {{ request()->routeIs('therapist.assignment') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
+                    <a href="{{ route('doctor.therapist-assignment') }}"
+                        class="py-2 px-4 border-b-2 {{ request()->routeIs('doctor.therapist-assignment') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
                         Therapist Assignment
-                    </a> --}}
-                    <button
-                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
-                        Therapist Assignment
-                    </button>
+                    </a>
+
                 </nav>
             </div>
         </div>

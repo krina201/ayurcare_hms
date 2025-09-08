@@ -36,8 +36,8 @@ class AppointmentController extends Controller
         // Get completed appointments count
         $completedAppointments = Appointment::where('status', 'Completed')->get();
 
-        $departments = Department::orderBy('name')->get();
-        $doctors = Doctor::orderBy('full_name')->get();
+        $departments = Department::where('is_active', 1)->orderBy('name')->get();
+        $doctors = Doctor::where('status', 1)->orderBy('full_name')->get();
         $patients = Patient::orderBy('full_name')->get();
 
         // Get patient data if uhid is provided
@@ -303,28 +303,25 @@ class AppointmentController extends Controller
         }
     }
 
-    /**
-     * Test endpoint to check if the patient search route is working
-     */
-    public function testPatientSearch()
-    {
-        try {
-            // Check if we can connect to the database
-            $patientCount = Patient::count();
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Patient search route is working',
-                'patient_count' => $patientCount,
-                'timestamp' => now()->toISOString()
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Patient search route test failed',
-                'error' => $e->getMessage()
-            ], 500);
+    public function getDoctorsByDepartment(Request $request)
+    {
+        $departmentId = $request->get('department_id');
+
+        if (!$departmentId) {
+            return response()->json(['error' => 'Department ID is required']);
         }
+
+        // Get doctors where specialty matches the department ID
+        $doctors = Doctor::where('specialty', $departmentId)
+            ->where('status', 1) // Only active doctors
+            ->orderBy('full_name')
+            ->get(['id', 'full_name', 'specialty', 'qualification']);
+
+        return response()->json([
+            'doctors' => $doctors,
+            'department_id' => $departmentId
+        ]);
     }
 
     public function getDoctorFees(Request $request)
@@ -466,7 +463,6 @@ class AppointmentController extends Controller
             ]
         ]);
     }
-
 
 
     private function generateTimeSlots($startTime, $endTime, $interval, $bookedSlots)

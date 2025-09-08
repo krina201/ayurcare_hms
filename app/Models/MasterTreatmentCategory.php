@@ -23,4 +23,22 @@ class MasterTreatmentCategory extends Model
     protected $casts = [
         'status' => 'integer',
     ];
+
+    /**
+     * Get therapists (doctors) who can perform this treatment category
+     */
+    public function therapists()
+    {
+        return \App\Models\Doctor::where('status', 1)
+            ->whereJsonContains('panchkarma_treatments', $this->id)
+            ->get();
+    }
+
+    /**
+     * Scope to get active treatment categories
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 1);
+    }
 }

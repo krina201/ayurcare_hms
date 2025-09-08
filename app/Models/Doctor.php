@@ -50,12 +50,56 @@ class Doctor extends Model
     // Relationship with department
     public function department()
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Department::class, 'specialty', 'id');
     }
 
     // Relationship with appointments
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    // Get panchkarma treatment categories
+    public function panchkarmaTreatmentCategories()
+    {
+        if (empty($this->panchkarma_treatments) || !is_array($this->panchkarma_treatments)) {
+            return collect();
+        }
+
+        return MasterTreatmentCategory::whereIn('id', $this->panchkarma_treatments)->get();
+    }
+
+    // Get expertise areas
+    public function expertiseAreas()
+    {
+        if (empty($this->expertise_areas) || !is_array($this->expertise_areas)) {
+            return collect();
+        }
+
+        return MasterExpertiseArea::whereIn('id', $this->expertise_areas)->get();
+    }
+
+    // Expertise areas accessor
+    public function getExpertiseAreasAttribute($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // Expertise areas mutator
+    public function setExpertiseAreasAttribute($value)
+    {
+        $this->attributes['expertise_areas'] = is_array($value) ? json_encode($value) : $value;
+    }
+
+    // Panchkarma treatments accessor
+    public function getPanchkarmaTreatmentsAttribute($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // Panchkarma treatments mutator
+    public function setPanchkarmaTreatmentsAttribute($value)
+    {
+        $this->attributes['panchkarma_treatments'] = is_array($value) ? json_encode($value) : $value;
     }
 }

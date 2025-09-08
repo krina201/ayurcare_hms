@@ -23,9 +23,8 @@ use Illuminate\Support\Facades\Schema;
 
 class PharmacyController extends Controller
 {
-    /**
-     * Display the pharmacy dashboard
-     */
+
+    //   Display the pharmacy dashboard
     public function index()
     {
         $pagename = 'Pharmacy Management';
@@ -34,7 +33,11 @@ class PharmacyController extends Controller
         // Get statistics
         $totalMedicines = Medicine::count();
         $activeMedicines = Medicine::where('status', 1)->count();
-        $expiringSoon = Medicine::where('expiry_date', '<=', now()->addDays(30))->count();
+        $expiringSoon = Medicine::where('expiry_date', '<=', now()->addDays(30))
+            ->where('expiry_date', '>', now())
+            ->where('status', 1)
+            ->where('track_expiry', true)
+            ->count();
         $lowStock = Medicine::whereRaw('initial_stock_quantity <= minimum_stock_level')->count();
         $draftMedicines = Medicine::draft()->count();
         $submittedMedicines = Medicine::submitted()->count();
@@ -81,6 +84,7 @@ class PharmacyController extends Controller
             'expiringItems'
         ));
     }
+
     // view Role form
     public function create()
     {
@@ -183,41 +187,14 @@ class PharmacyController extends Controller
     }
 
 
-    /**
-     * Display medicine inventory
-     */
-    public function inventory()
-    {
-        $pagename = 'Medicine Inventory';
-        $breadcrumb = 'Medicine Inventory';
-
-        $medicines = Medicine::with(['medicineType', 'medicineCategory', 'manufacturer', 'measurement'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
-
-        return view('backend.pharmacy.inventory', compact('pagename', 'breadcrumb', 'medicines'));
-    }
-
-    /**
-     * Show medicine details
-     */
-    public function show($id)
-    {
-        $medicine = Medicine::with(['medicineType', 'medicineCategory', 'manufacturer', 'measurement'])->findOrFail($id);
-        $pagename = 'Medicine Details';
-        $breadcrumb = 'Medicine Details';
-
-        return view('backend.pharmacy.show', compact('pagename', 'breadcrumb', 'medicine'));
-    }
-
-    /**
-     * Show edit form
-     */
+    // Edit form view
     public function edit($id)
     {
-        $medicine = Medicine::findOrFail($id);
         $pagename = 'Edit Medicine';
         $breadcrumb = 'Edit Medicine';
+
+        // Find the medicine
+        $medicine = Medicine::findOrFail($id);
 
         // Get master data for dropdowns
         $medicineTypes = MasterMedicineType::orderBy('name')->get();
@@ -225,12 +202,18 @@ class PharmacyController extends Controller
         $manufacturers = MasterManufacturer::orderBy('name')->get();
         $measurements = MasterMeasurement::orderBy('name')->get();
 
-        return view('backend.pharmacy.edit', compact('pagename', 'breadcrumb', 'medicine', 'medicineTypes', 'medicineCategories', 'manufacturers', 'measurements'));
+        return view('backend.pharmacy.edit', compact(
+            'pagename',
+            'breadcrumb',
+            'medicine',
+            'medicineTypes',
+            'medicineCategories',
+            'manufacturers',
+            'measurements'
+        ));
     }
 
-    /**
-     * Update medicine
-     */
+    // Update medicine data in database
     public function update(Request $request, $id)
     {
         $medicine = Medicine::findOrFail($id);
@@ -251,7 +234,7 @@ class PharmacyController extends Controller
             'batch_number' => 'required|string|max:100',
             'manufacturing_date' => 'required|date',
             'expiry_date' => 'required|date|after:manufacturing_date',
-            'initial_stock_quantity' => 'required|integer|min:0',
+            'current_stock_quantity' => 'nullable|integer|min:0',
             'minimum_stock_level' => 'required|integer|min:0',
             'storage_location' => 'required|string|max:255',
             'purchase_price' => 'required|numeric|min:0',
@@ -288,7 +271,7 @@ class PharmacyController extends Controller
             'batch_number' => $request->batch_number,
             'manufacturing_date' => $request->manufacturing_date,
             'expiry_date' => $request->expiry_date,
-            'initial_stock_quantity' => $request->initial_stock_quantity,
+            'current_stock_quantity' => $request->current_stock_quantity,
             'minimum_stock_level' => $request->minimum_stock_level,
             'storage_location' => $request->storage_location,
             'purchase_price' => $request->purchase_price,
@@ -300,16 +283,15 @@ class PharmacyController extends Controller
             'notes' => $request->notes,
             'status' => $request->has('status'),
             'track_expiry' => $request->has('track_expiry'),
-            'save_type' => $request->save_type
+            'save_type' => $request->save_type,
+            'updated_at' => now()
         ]);
 
         // DB::commit();
-
-        // Save the user
         if ($medicine->save()) {
 
             $message = $request->save_type == 0
-                ? 'Medicine updated and saved as draft successfully!'
+                ? 'Medicine saved as draft successfully!'
                 : 'Medicine updated successfully!';
 
             return redirect()->route('pharmacy')->with('success', $message);
@@ -329,6 +311,34 @@ class PharmacyController extends Controller
         }
         return response()->json(['success' => false, 'message' => 'Failed to delete Medicine.'], 500);
     }
+
+
+    //  Display medicine inventory
+
+    public function inventory()
+    {
+        $pagename = 'Medicine Inventory';
+        $breadcrumb = 'Medicine Inventory';
+
+        $medicines = Medicine::with(['medicineType', 'medicineCategory', 'manufacturer', 'measurement'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return view('backend.pharmacy.inventory', compact('pagename', 'breadcrumb', 'medicines'));
+    }
+
+
+    //  Show medicine details
+    public function show($id)
+    {
+        $medicine = Medicine::with(['medicineType', 'medicineCategory', 'manufacturer', 'measurement'])->findOrFail($id);
+        $pagename = 'Medicine Details';
+        $breadcrumb = 'Medicine Details';
+
+        return view('backend.pharmacy.show', compact('pagename', 'breadcrumb', 'medicine'));
+    }
+
+
 
     /**
      * Display dispense form
@@ -350,25 +360,19 @@ class PharmacyController extends Controller
         // Get users for dispensed by dropdown
         $users = User::with('role')->orderBy('name')->get();
 
-        // Get recent dispensations
+        // Get recent dispensations with relationships
         $recentDispensations = collect(); // Default empty collection
 
         // Check if table exists before querying
         if (Schema::hasTable('medicine_dispenses')) {
-            $recentDispensations = DB::table('medicine_dispenses')
-                ->join('patients', 'medicine_dispenses.patient_id', '=', 'patients.id')
-                ->join('users', 'medicine_dispenses.dispensed_by', '=', 'users.id')
-                ->select(
-                    'medicine_dispenses.receipt_number',
-                    'medicine_dispenses.dispense_date',
-                    'medicine_dispenses.total_amount',
-                    'patients.full_name',
-                    'patients.uhid',
-                    'patients.photo_path',
-                    'users.name as dispensed_by_name'
-                )
-                ->orderBy('medicine_dispenses.created_at', 'desc')
-                ->limit(5)
+            $recentDispensations = MedicineDispense::with([
+                'patient:id,uhid,full_name,photo_path',
+                'prescription.doctor:id,name',
+                'dispensedBy:id,name',
+                'items'
+            ])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
                 ->get();
         } else {
             Log::warning('medicine_dispenses table does not exist');
@@ -448,9 +452,7 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * Search patient by UHID, name, or mobile (using Appointment module pattern)
-     */
+    //  Search patient by UHID, name, or mobile (using Appointment module pattern)
     public function searchPatient(Request $request)
     {
         try {
@@ -559,9 +561,8 @@ class PharmacyController extends Controller
         }
     }
 
-    /**
-     * Get patient prescriptions
-     */
+
+    //   Get patient prescriptions
     public function getPatientPrescriptions(Request $request)
     {
         $patientId = $request->get('patient_id');
@@ -585,9 +586,8 @@ class PharmacyController extends Controller
         ]);
     }
 
-    /**
-     * Get medicine inventory status
-     */
+
+    //  Get medicine inventory status
     public function getMedicineInventory()
     {
         $medicines = Medicine::with(['medicineType', 'medicineCategory', 'manufacturer'])
@@ -614,9 +614,7 @@ class PharmacyController extends Controller
         ]);
     }
 
-    /**
-     * Process dispense medication
-     */
+    // Process dispense medication
     public function processDispense(Request $request)
     {
         Log::info('Process dispense request received:', $request->all());
@@ -901,6 +899,39 @@ class PharmacyController extends Controller
             'success' => true,
             'medicines' => $medicines
         ]);
+    }
+
+    /**
+     * Display all dispensations
+     */
+    public function allDispensations()
+    {
+        $pagename = 'All Dispensations';
+        $breadcrumb = 'All Dispensations';
+
+        // Get all dispensations with relationships and pagination
+        $dispensations = collect(); // Default empty collection
+
+        // Check if table exists before querying
+        if (Schema::hasTable('medicine_dispenses')) {
+            $dispensations = MedicineDispense::with([
+                'patient:id,uhid,full_name,photo_path',
+                'prescription.doctor:id,name',
+                'dispensedBy:id,name',
+                'items.medicine:id,name',
+                'paymentMode:id,name'
+            ])
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+        } else {
+            Log::warning('medicine_dispenses table does not exist');
+        }
+
+        return view('backend.pharmacy.dispensations_view', compact(
+            'pagename',
+            'breadcrumb',
+            'dispensations'
+        ));
     }
 
     /**

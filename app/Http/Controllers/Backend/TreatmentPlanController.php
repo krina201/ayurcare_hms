@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\TreatmentPlan;
 use App\Models\Patient;
 use App\Models\Doctor;
-use App\Models\MasterHerb;
-use App\Models\MasterOil;
+use App\Models\Medicine;
 use App\Models\MasterRoom;
 use App\Models\MasterTreatmentCategory;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -18,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Exception;
 
 class TreatmentPlanController extends Controller
 {
@@ -29,16 +28,18 @@ class TreatmentPlanController extends Controller
         $pagename = 'Treatment Plan';
         $breadcrumb = 'Treatment Plan List';
 
-        // Get recent treatment plans for the table
-        $recentTreatmentPlans = TreatmentPlan::with(['patient', 'createdBy'])
+        // Get recent treatment plans for the table with soft deleted patients
+        $recentTreatmentPlans = TreatmentPlan::with(['patient' => function ($query) {
+            $query->withTrashed(); // Include soft deleted patients
+        }, 'createdBy'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
 
         // Get master data for dropdowns
         $treatmentCategories = MasterTreatmentCategory::where('status', 1)->get();
-        $oils = MasterOil::where('status', 1)->get();
-        $herbs = MasterHerb::where('status', 1)->get();
+        $oils = Medicine::where('status', 1)->where('medicine_type_id', 3)->get(); // Oils from medicines table
+        $herbs = Medicine::where('status', 1)->where('medicine_type_id', 11)->get(); // Herbs from medicines table
         $rooms = MasterRoom::where('status', 1)->get();
         $therapists = Doctor::where('status', 1)->get();
         $patients = Patient::all();
@@ -69,9 +70,9 @@ class TreatmentPlanController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date',
             'dosha_report' => 'required|string',
             'oils_required' => 'nullable|array',
-            'oils_required.*' => 'exists:master_oils,id',
+            'oils_required.*' => 'exists:medicines,id',
             'herbs_required' => 'nullable|array',
-            'herbs_required.*' => 'exists:master_herbs,id',
+            'herbs_required.*' => 'exists:medicines,id',
             'special_instructions' => 'nullable|string',
             'recommended_therapist' => 'nullable|exists:doctors,id',
             'room_allocation' => 'nullable|exists:master_rooms,id',
@@ -112,10 +113,10 @@ class TreatmentPlanController extends Controller
                 $fileName = 'consent_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
 
                 // Move file directly into public/backend-assets/media/uploads
-                $consentFilePath = $file->move(public_path('backend-assets/media/uploads/consents'), $fileName);
+                $consentFilePath = $file->move(public_path('backend-assets/media/uploads/treatment'), $fileName);
 
                 // If you want to store only relative path in DB
-                $consentFilePath = 'backend-assets/media/uploads/consents/' . $fileName;
+                $consentFilePath = 'backend-assets/media/uploads/treatment/' . $fileName;
             }
 
 
@@ -159,11 +160,17 @@ class TreatmentPlanController extends Controller
                 ? 'Treatment plan saved as draft successfully.'
                 : 'Treatment plan created successfully.';
 
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'treatment_plan' => $treatmentPlan->load('patient')
-            ]);
+            // Check if it's an AJAX request
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'treatment_plan' => $treatmentPlan->load('patient')
+                ]);
+            }
+
+            // For non-AJAX requests, redirect with session message
+            return redirect()->route('treatment-plan')->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Treatment plan creation failed', [
@@ -180,36 +187,43 @@ class TreatmentPlanController extends Controller
     }
 
     /**
-     * Display the specified treatment plan
-     */
-    public function show(TreatmentPlan $treatmentPlan)
-    {
-        $treatmentPlan->load(['patient', 'createdBy', 'treatmentCategory', 'room']);
-
-        return view('backend.treatment_plan.show', compact('treatmentPlan'));
-    }
-
-    /**
-     * Show the form for editing the specified treatment plan
+     * Show edit form on the same index page
      */
     public function edit(TreatmentPlan $treatmentPlan)
     {
-        $treatmentPlan->load(['patient', 'createdBy', 'treatmentCategory', 'room']);
+        $pagename = 'Treatment Plan';
+        $breadcrumb = 'Treatment Plan List';
+
+        // Get recent treatment plans for the table with soft deleted patients
+        $recentTreatmentPlans = TreatmentPlan::with(['patient' => function ($query) {
+            $query->withTrashed(); // Include soft deleted patients
+        }, 'createdBy'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
 
         // Get master data for dropdowns
         $treatmentCategories = MasterTreatmentCategory::where('status', 1)->get();
-        $oils = MasterOil::where('status', 1)->get();
-        $herbs = MasterHerb::where('status', 1)->get();
+        $oils = Medicine::where('status', 1)->where('medicine_type_id', 3)->get(); // Oils from medicines table
+        $herbs = Medicine::where('status', 1)->where('medicine_type_id', 11)->get(); // Herbs from medicines table
         $rooms = MasterRoom::where('status', 1)->get();
         $therapists = Doctor::where('status', 1)->get();
+        $patients = Patient::all();
 
-        return view('backend.treatment_plan.edit', compact(
-            'treatmentPlan',
+        // Pass the treatment plan to edit
+        $editTreatmentPlan = $treatmentPlan;
+
+        return view('backend.treatment_plan.index', compact(
+            'pagename',
+            'breadcrumb',
+            'recentTreatmentPlans',
             'treatmentCategories',
             'oils',
             'herbs',
             'rooms',
-            'therapists'
+            'therapists',
+            'patients',
+            'editTreatmentPlan'
         ));
     }
 
@@ -219,113 +233,105 @@ class TreatmentPlanController extends Controller
     public function update(Request $request, TreatmentPlan $treatmentPlan)
     {
         $validator = Validator::make($request->all(), [
+            'patient_id' => 'required|exists:patients,id',
             'treatment_category' => 'required|exists:master_treatment_categories,id',
             'procedure_name' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'dosha_report' => 'required|string',
             'oils_required' => 'nullable|array',
-            'oils_required.*' => 'exists:master_oils,id',
+            'oils_required.*' => 'exists:medicines,id',
             'herbs_required' => 'nullable|array',
-            'herbs_required.*' => 'exists:master_herbs,id',
-            'special_instructions' => 'nullable|string',
-            'recommended_therapist' => 'nullable|exists:doctors,id',
-            'room_allocation' => 'nullable|exists:master_rooms,id',
-            'day_wise_schedule' => 'nullable|array',
-            'consent_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'herbs_required.*' => 'exists:medicines,id',
+            'special_instructions' => 'required|string',
+            'recommended_therapist' => 'required|exists:doctors,id',
+            'room_allocation' => 'required|exists:master_rooms,id',
+            'day_wise_schedule' => 'nullable',
+            'consent_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB max
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
         DB::beginTransaction();
-        try {
-            $data = $validator->validated();
 
-            // Handle consent file upload
-            if ($request->hasFile('consent_file')) {
-                // Delete old file if exists
-                if ($treatmentPlan->consent_file_path) {
-                    Storage::disk('public')->delete($treatmentPlan->consent_file_path);
-                }
+        $data = $validator->validated();
 
-                $file = $request->file('consent_file');
-                $fileName = 'consent_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                $consentFilePath = $file->storeAs('consents', $fileName, 'public');
-                $data['consent_file_path'] = $consentFilePath;
+        // Handle consent file upload
+        $consentFilePath = $treatmentPlan->consent_file_path; // Keep existing file by default
+        if ($request->hasFile('consent_file')) {
+            // Delete old file if exists
+            if ($treatmentPlan->consent_file_path && file_exists(public_path($treatmentPlan->consent_file_path))) {
+                unlink(public_path($treatmentPlan->consent_file_path));
             }
 
-            // Update treatment plan
-            $treatmentPlan->update([
-                'treatment_category' => $data['treatment_category'],
-                'procedure_name' => $data['procedure_name'],
-                'start_date' => $data['start_date'],
-                'end_date' => $data['end_date'],
-                'dosha_report' => $data['dosha_report'],
-                'oils_required' => $data['oils_required'] ?? [],
-                'herbs_required' => $data['herbs_required'] ?? [],
-                'special_instructions' => $data['special_instructions'] ?? null,
-                'recommended_therapist' => $data['recommended_therapist'] ?? null,
-                'room_allocation' => $data['room_allocation'] ?? null,
-                'day_wise_schedule' => $data['day_wise_schedule'] ?? [],
-                'consent_file_path' => $data['consent_file_path'] ?? $treatmentPlan->consent_file_path,
-                'status' => $request->has('save_as_draft') ? 0 : 1,
-                'type' => $request->has('save_as_draft') ? 0 : 1,
-            ]);
-
-            DB::commit();
-
-            $message = $request->has('save_as_draft')
-                ? 'Treatment plan updated as draft successfully.'
-                : 'Treatment plan updated successfully.';
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'treatment_plan' => $treatmentPlan->load('patient')
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update treatment plan: ' . $e->getMessage()
-            ], 500);
+            $file = $request->file('consent_file');
+            $fileName = 'consent_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('backend-assets/media/uploads/treatment'), $fileName);
+            $consentFilePath = 'backend-assets/media/uploads/treatment/' . $fileName;
         }
+
+        // Handle arrays
+        $oilsRequired = $data['oils_required'] ?? [];
+        $herbsRequired = $data['herbs_required'] ?? [];
+
+        // Handle day_wise_schedule
+        $dayWiseSchedule = [];
+        if (!empty($data['day_wise_schedule'])) {
+            if (is_string($data['day_wise_schedule'])) {
+                $dayWiseSchedule = json_decode($data['day_wise_schedule'], true) ?? [];
+            } else {
+                $dayWiseSchedule = $data['day_wise_schedule'];
+            }
+        }
+
+        // Update treatment plan
+        $treatmentPlan->update([
+            'patient_id' => $data['patient_id'],
+            'treatment_category' => $data['treatment_category'],
+            'procedure_name' => $data['procedure_name'],
+            'start_date' => $data['start_date'],
+            'end_date' => $data['end_date'],
+            'dosha_report' => $data['dosha_report'],
+            'oils_required' => $oilsRequired,
+            'herbs_required' => $herbsRequired,
+            'special_instructions' => $data['special_instructions'],
+            'recommended_therapist' => $data['recommended_therapist'],
+            'room_allocation' => $data['room_allocation'],
+            'day_wise_schedule' => $dayWiseSchedule,
+            'consent_file_path' => $consentFilePath,
+            'status' => $request->has('save_as_draft') ? 0 : 1, // 0=draft, 1=active
+            'type' => $request->has('save_as_draft') ? 0 : 1, // 0=draft, 1=saved
+        ]);
+
+        DB::commit();
+
+        $message = $request->has('save_as_draft')
+            ? 'Treatment plan draft updated successfully.'
+            : 'Treatment plan updated successfully.';
+
+        return redirect()->route('treatment-plan')->with('success', $message);
     }
 
-    /**
-     * Remove the specified treatment plan
-     */
+    // Delete the specified treatment plan
     public function destroy(TreatmentPlan $treatmentPlan)
     {
-        try {
-            // Delete consent file if exists
-            if ($treatmentPlan->consent_file_path) {
-                Storage::disk('public')->delete($treatmentPlan->consent_file_path);
-            }
-
-            $treatmentPlan->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Treatment plan deleted successfully.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete treatment plan: ' . $e->getMessage()
-            ], 500);
+        // Delete consent file if exists
+        if ($treatmentPlan->consent_file_path && file_exists(public_path($treatmentPlan->consent_file_path))) {
+            unlink(public_path($treatmentPlan->consent_file_path));
         }
+
+        // delete treatment plan from database
+        if ($treatmentPlan->delete()) {
+
+            return redirect()->route('treatment-plan')->with('success', 'treatment plan deleted Successfully');
+        }
+        return redirect()->route('treatment-plan')->with('error', 'Failed to delete treatment plan');
     }
 
-    /**
-     * Search patient by UHID or name
-     */
+
+    //  Search patient by UHID or name
     public function searchPatient(Request $request)
     {
         try {
@@ -442,6 +448,28 @@ class TreatmentPlanController extends Controller
         }
     }
 
+
+
+    /**
+     * Get therapists by treatment category
+     */
+    public function getTherapistsByCategory(Request $request)
+    {
+        $categoryId = $request->get('category_id');
+
+        if (!$categoryId) {
+            return response()->json([]);
+        }
+
+        // Get doctors who have this treatment category in their panchkarma_treatments
+        $therapists = Doctor::where('status', 1)
+            ->whereJsonContains('panchkarma_treatments', (int)$categoryId)
+            ->select('id', 'full_name', 'specialty')
+            ->get();
+
+        return response()->json($therapists);
+    }
+
     /**
      * Update treatment plan status
      */
@@ -471,27 +499,5 @@ class TreatmentPlanController extends Controller
                 'message' => 'Failed to update status: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Download consent file
-     */
-    public function downloadConsent(TreatmentPlan $treatmentPlan)
-    {
-        if (!$treatmentPlan->consent_file_path) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No consent file found for this treatment plan.'
-            ], 404);
-        }
-
-        if (!Storage::disk('public')->exists($treatmentPlan->consent_file_path)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Consent file not found on server.'
-            ], 404);
-        }
-
-        return response()->download(storage_path('app/public/' . $treatmentPlan->consent_file_path));
     }
 }

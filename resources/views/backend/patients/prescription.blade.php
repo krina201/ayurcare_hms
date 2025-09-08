@@ -240,6 +240,13 @@
 
                             <div id="medicationsList" class="space-y-4">
                                 <!-- Medication items will be added here by JavaScript -->
+                                <!-- Debug: Show medicines count -->
+                                <div id="debug-info" class="text-sm text-gray-500 mb-2">
+                                    Medicines available: {{ count($medicines ?? []) }}
+                                    @if (isset($medicines) && count($medicines) > 0)
+                                        ({{ $medicines->first()->name ?? 'N/A' }})
+                                    @endif
+                                </div>
                             </div>
                             <p class="mt-1 text-sm text-red-600 js-error" id="medications-error" style="display:none">
                             </p>
@@ -341,6 +348,10 @@
             // Initialize with existing data if editing
             const oldMedications = @json(old('medications', []));
 
+            // Medicine options from server
+            const medicines = @json($medicines ?? []);
+            console.log('Medicines loaded:', medicines.length, medicines);
+
             function updateMedicationIndices() {
                 const items = medicationsList.querySelectorAll('.medication-item');
                 items.forEach((item, index) => {
@@ -373,6 +384,22 @@
                     'bg-ayur-offwhite');
                 item.dataset.index = index;
 
+                // Generate medicine options
+                let medicineOptions = '<option value="">Select Medication</option>';
+
+                if (medicines && medicines.length > 0) {
+                    medicines.forEach(medicine => {
+                        const selected = data.name == medicine.id ? 'selected' : '';
+                        const strengthText = medicine.strength_dosage ? ` - ${medicine.strength_dosage}` :
+                            '';
+                        medicineOptions += `<option value="${medicine.id}" data-strength="${medicine.strength_dosage || ''}" ${selected}>
+                            ${medicine.name}${strengthText}
+                        </option>`;
+                    });
+                } else {
+                    medicineOptions += '<option value="" disabled>No medicines available</option>';
+                }
+
                 item.innerHTML = `
                     <div class="flex items-center justify-between mb-3">
                         <h5 class="font-medium text-ayur-brown-800">Medication ${index + 1}</h5>
@@ -385,10 +412,10 @@
                             <label class="block text-sm font-medium text-ayur-brown-700 mb-1">
                                 Medication Name <span class="text-red-500">*</span>
                             </label>
-                            <input type="text" name="medications[${index}][name]" 
-                                   placeholder="e.g., Avipattikar Churna"
-                                   value="${data.name || ''}"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-ayur-green-500 focus:border-ayur-green-500 text-sm">
+                            <select name="medications[${index}][name]" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-ayur-green-500 focus:border-ayur-green-500 text-sm medicine-select">
+                                ${medicineOptions}
+                            </select>
                             <p class="mt-1 text-sm text-red-600 js-error" id="medications.${index}.name-error" style="display:none"></p>
                         </div>
                         <div>
@@ -636,6 +663,26 @@
                     if (medicationsList.querySelectorAll('.medication-item').length > 0) {
                         clearError('medications');
                     }
+                }
+            });
+
+            // Handle medicine selection change
+            medicationsList.addEventListener('change', function(e) {
+                if (e.target.classList.contains('medicine-select')) {
+                    const selectedOption = e.target.selectedOptions[0];
+                    const item = e.target.closest('.medication-item');
+                    const index = item.dataset.index;
+
+                    // Auto-populate dosage if strength is available
+                    if (selectedOption && selectedOption.dataset.strength) {
+                        const dosageInput = item.querySelector(`[name="medications[${index}][dosage]"]`);
+                        if (dosageInput && !dosageInput.value) {
+                            dosageInput.value = selectedOption.dataset.strength;
+                        }
+                    }
+
+                    // Clear name error when medicine is selected
+                    clearDynamicError('name', index);
                 }
             });
 

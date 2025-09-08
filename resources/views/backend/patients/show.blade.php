@@ -177,83 +177,84 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @forelse($appointments as $appointment)
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">
-                                {{ $appointment->appointment_date ? $appointment->appointment_date->format('d M, Y') : 'N/A' }}
-                                @if($appointment->appointment_time)
-                                <br><span class="text-xs text-ayur-brown-600">{{ $appointment->appointment_time->format('h:i A') }}</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    @if($appointment->mode === 'OPD') bg-ayur-green-100 text-ayur-green-800
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-800">
+                                    {{ $appointment->appointment_date ? $appointment->appointment_date->format('d M, Y') : 'N/A' }}
+                                    @if ($appointment->appointment_time)
+                                        <br><span
+                                            class="text-xs text-ayur-brown-600">{{ $appointment->appointment_time->format('h:i A') }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    @if ($appointment->mode === 'OPD') bg-ayur-green-100 text-ayur-green-800
                                     @elseif($appointment->mode === 'Panchkarma') bg-ayur-yellow-100 text-ayur-yellow-800
-                                    @else bg-ayur-blue-100 text-ayur-blue-800
-                                    @endif">
-                                    {{ $appointment->mode ?? 'N/A' }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                @if($appointment->doctor)
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-8 w-8">
-                                        <img class="h-8 w-8 rounded-full"
-                                            src="{{ $appointment->doctor->photo_path ? asset($appointment->doctor->photo_path) : asset('backend-assets/media/uploads/doctors/photos/1756374865_photo_SYtF2ghp.jpg') }}"
-                                            alt="{{ $appointment->doctor->full_name }}">
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-ayur-brown-800">{{ $appointment->doctor->full_name }}</div>
-                                        <div class="text-xs text-ayur-brown-600">{{ $appointment->doctor->specialization ?? 'General Physician' }}</div>
-                                    </div>
-                                </div>
-                                @else
-                                <span class="text-sm text-ayur-brown-600">Not Assigned</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
-                                {{ $appointment->department->name ?? 'N/A' }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                    @if($appointment->status === 'Completed') bg-ayur-green-100 text-ayur-green-800
+                                    @else bg-ayur-blue-100 text-ayur-blue-800 @endif">
+                                        {{ $appointment->mode ?? 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if ($appointment->doctor)
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <img class="h-8 w-8 rounded-full"
+                                                    src="{{ $appointment->doctor->photo_path ? asset($appointment->doctor->photo_path) : asset('backend-assets/media/uploads/doctors/photos/1756374865_photo_SYtF2ghp.jpg') }}"
+                                                    alt="{{ $appointment->doctor->full_name }}">
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-ayur-brown-800">
+                                                    {{ $appointment->doctor->full_name }}</div>
+                                                <div class="text-xs text-ayur-brown-600">
+                                                    {{ $appointment->doctor->specialization ?? 'General Physician' }}</div>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <span class="text-sm text-ayur-brown-600">Not Assigned</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-ayur-brown-700">
+                                    {{ $appointment->department->name ?? 'N/A' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                    @if ($appointment->status === 'Completed') bg-ayur-green-100 text-ayur-green-800
                                     @elseif($appointment->status === 'Scheduled') bg-ayur-blue-100 text-ayur-blue-800
                                     @elseif($appointment->status === 'Waiting') bg-ayur-yellow-100 text-ayur-yellow-800
                                     @elseif($appointment->status === 'Cancelled') bg-red-100 text-red-800
-                                    @else bg-gray-100 text-gray-800
-                                    @endif">
-                                    {{ $appointment->status ?? 'N/A' }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <a href="{{ route('appointments.show', $appointment->id) }}" 
-                                   class="text-ayur-green-600 hover:text-ayur-green-900 mr-3" 
-                                   title="View Details">
-                                    <i class="fa-solid fa-eye"></i>
-                                </a>
-                                @if($appointment->status === 'Completed')
-                                <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3" title="Print">
-                                    <i class="fa-solid fa-print"></i>
-                                </button>
-                                @endif
-                                <button class="text-ayur-yellow-600 hover:text-ayur-yellow-900" title="Share">
-                                    <i class="fa-solid fa-share"></i>
-                                </button>
-                            </td>
-                                                </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="px-6 py-8 text-center text-ayur-brown-600">
-                                <div class="flex flex-col items-center">
-                                    <i class="fa-solid fa-calendar-times text-4xl mb-2 text-ayur-brown-400"></i>
-                                    <p class="text-sm">No appointments found for this patient</p>
-                                    <a href="{{ route('appointment', ['uhid' => $patient->uhid]) }}" 
-                                       class="mt-2 text-ayur-green-600 hover:text-ayur-green-800 text-sm font-medium">
-                                        Book First Appointment
+                                    @else bg-gray-100 text-gray-800 @endif">
+                                        {{ $appointment->status ?? 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <a href="{{ route('appointments.show', $appointment->id) }}"
+                                        class="text-ayur-green-600 hover:text-ayur-green-900 mr-3" title="View Details">
+                                        <i class="fa-solid fa-eye"></i>
                                     </a>
-                                </div>
-                            </td>
-                        </tr>
+                                    @if ($appointment->status === 'Completed')
+                                        <button class="text-ayur-brown-600 hover:text-ayur-brown-900 mr-3" title="Print">
+                                            <i class="fa-solid fa-print"></i>
+                                        </button>
+                                    @endif
+                                    <button class="text-ayur-yellow-600 hover:text-ayur-yellow-900" title="Share">
+                                        <i class="fa-solid fa-share"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-6 py-8 text-center text-ayur-brown-600">
+                                    <div class="flex flex-col items-center">
+                                        <i class="fa-solid fa-calendar-times text-4xl mb-2 text-ayur-brown-400"></i>
+                                        <p class="text-sm">No appointments found for this patient</p>
+                                        <a href="{{ route('appointment', ['uhid' => $patient->uhid]) }}"
+                                            class="mt-2 text-ayur-green-600 hover:text-ayur-green-800 text-sm font-medium">
+                                            Book First Appointment
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -280,127 +281,93 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div id="prescription1" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <h4 class="font-medium text-ayur-brown-800">Prescription #PR-2025-153</h4>
-                            <p class="text-sm text-ayur-brown-600">15 Jul, 2025</p>
-                        </div>
-                        <span class="px-2 py-1 bg-ayur-green-100 text-ayur-green-800 text-xs rounded-full">Active</span>
-                    </div>
-                    <div class="mb-3 pb-3 border-b border-gray-100">
-                        <p class="text-sm text-ayur-brown-700 mb-1"><span class="font-medium">Doctor:</span> Dr.
-                            Sharma</p>
-                        <p class="text-sm text-ayur-brown-700"><span class="font-medium">Diagnosis:</span> Chronic
-                            Digestive Issues (Pitta imbalance)</p>
-                    </div>
-                    <div class="space-y-2 mb-3">
-                        <div class="flex items-start">
-                            <i class="fa-solid fa-capsules text-ayur-green-600 mt-1 mr-2"></i>
-                            <div>
-                                <p class="text-sm font-medium text-ayur-brown-800">Avipattikar Churna</p>
-                                <p class="text-xs text-ayur-brown-600">2g twice daily after meals with warm water
+            @if ($prescriptions->count() > 0)
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @foreach ($prescriptions as $prescription)
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <h4 class="font-medium text-ayur-brown-800">Prescription
+                                        #PR-{{ $prescription->prescription_date->format('Y') }}-{{ str_pad($prescription->id, 3, '0', STR_PAD_LEFT) }}
+                                    </h4>
+                                    <p class="text-sm text-ayur-brown-600">
+                                        {{ $prescription->prescription_date->format('d M, Y') }}</p>
+                                </div>
+                                <span
+                                    class="px-2 py-1 {{ $prescription->status == 1 ? 'bg-ayur-green-100 text-ayur-green-800' : 'bg-gray-100 text-gray-600' }} text-xs rounded-full">
+                                    {{ $prescription->status == 1 ? 'Active' : 'Draft' }}
+                                </span>
+                            </div>
+                            <div class="mb-3 pb-3 border-b border-gray-100">
+                                <p class="text-sm text-ayur-brown-700 mb-1">
+                                    <span class="font-medium">Doctor:</span>
+                                    {{ $prescription->doctor->full_name ?? 'N/A' }}
                                 </p>
+                                <p class="text-sm text-ayur-brown-700">
+                                    <span class="font-medium">Diagnosis:</span> {{ $prescription->diagnosis }}
+                                </p>
+                                @if ($prescription->chief_complaint)
+                                    <p class="text-sm text-ayur-brown-700">
+                                        <span class="font-medium">Chief Complaint:</span>
+                                        {{ $prescription->chief_complaint }}
+                                    </p>
+                                @endif
+                            </div>
+                            <div class="space-y-2 mb-3">
+                                @foreach ($prescription->items->take(3) as $item)
+                                    <div class="flex items-start">
+                                        <i class="fa-solid fa-capsules text-ayur-green-600 mt-1 mr-2"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-ayur-brown-800">
+                                                {{ $item->full_medicine_name }}</p>
+                                            <p class="text-xs text-ayur-brown-600">
+                                                {{ $item->dosage }} - {{ $item->frequency }} for {{ $item->duration }}
+                                                @if ($item->instructions)
+                                                    <br><span class="italic">{{ $item->instructions }}</span>
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </div>
+                                @endforeach
+                                @if ($prescription->items->count() > 3)
+                                    <p class="text-xs text-ayur-brown-500 italic">
+                                        +{{ $prescription->items->count() - 3 }} more medicines...
+                                    </p>
+                                @endif
+                            </div>
+                            <div class="flex justify-end space-x-2">
+                                <button class="text-ayur-green-600 hover:text-ayur-green-700 text-sm font-medium">
+                                    <i class="fa-solid fa-eye mr-1"></i> View
+                                </button>
+                                <button class="text-ayur-brown-600 hover:text-ayur-brown-700 text-sm font-medium">
+                                    <i class="fa-solid fa-print mr-1"></i> Print
+                                </button>
                             </div>
                         </div>
-                        <div class="flex items-start">
-                            <i class="fa-solid fa-prescription-bottle text-ayur-green-600 mt-1 mr-2"></i>
-                            <div>
-                                <p class="text-sm font-medium text-ayur-brown-800">Triphala Tablet</p>
-                                <p class="text-xs text-ayur-brown-600">2 tablets at bedtime with warm water</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start">
-                            <i class="fa-solid fa-flask text-ayur-green-600 mt-1 mr-2"></i>
-                            <div>
-                                <p class="text-sm font-medium text-ayur-brown-800">Amalaki Rasayana</p>
-                                <p class="text-xs text-ayur-brown-600">1 teaspoon with honey in the morning</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-2">
-                        <button class="text-ayur-green-600 hover:text-ayur-green-700 text-sm font-medium">
-                            <i class="fa-solid fa-eye mr-1"></i> View
-                        </button>
-                        <button class="text-ayur-brown-600 hover:text-ayur-brown-700 text-sm font-medium">
-                            <i class="fa-solid fa-print mr-1"></i> Print
-                        </button>
-                    </div>
+                    @endforeach
                 </div>
+            @else
+                <div class="text-center py-12">
+                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-prescription text-gray-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-ayur-brown-800 mb-2">No Prescriptions Found</h3>
+                    <p class="text-ayur-brown-600 mb-6">This patient doesn't have any prescriptions yet.</p>
+                    <a href="{{ route('patients.prescriptions.create', $patient) }}"
+                        class="bg-ayur-green-600 text-white hover:bg-ayur-green-700 font-medium rounded-lg text-sm px-6 py-3 inline-flex items-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Create First Prescription
+                    </a>
+                </div>
+            @endif
 
-                <div id="prescription2" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <h4 class="font-medium text-ayur-brown-800">Prescription #PR-2025-112</h4>
-                            <p class="text-sm text-ayur-brown-600">28 Jun, 2025</p>
-                        </div>
-                        <span class="px-2 py-1 bg-ayur-green-100 text-ayur-green-800 text-xs rounded-full">Active</span>
-                    </div>
-                    <div class="mb-3 pb-3 border-b border-gray-100">
-                        <p class="text-sm text-ayur-brown-700 mb-1"><span class="font-medium">Doctor:</span> Dr.
-                            Patel</p>
-                        <p class="text-sm text-ayur-brown-700"><span class="font-medium">Diagnosis:</span> Chronic
-                            Lower Back Pain (Vata imbalance)</p>
-                    </div>
-                    <div class="space-y-2 mb-3">
-                        <div class="flex items-start">
-                            <i class="fa-solid fa-oil-can text-ayur-green-600 mt-1 mr-2"></i>
-                            <div>
-                                <p class="text-sm font-medium text-ayur-brown-800">Mahanarayana Taila</p>
-                                <p class="text-xs text-ayur-brown-600">For external application on affected area</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start">
-                            <i class="fa-solid fa-pills text-ayur-green-600 mt-1 mr-2"></i>
-                            <div>
-                                <p class="text-sm font-medium text-ayur-brown-800">Yogaraja Guggulu</p>
-                                <p class="text-xs text-ayur-brown-600">2 tablets twice daily after meals</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start">
-                            <i class="fa-solid fa-mortar-pestle text-ayur-green-600 mt-1 mr-2"></i>
-                            <div>
-                                <p class="text-sm font-medium text-ayur-brown-800">Ashwagandha Churna</p>
-                                <p class="text-xs text-ayur-brown-600">1 teaspoon with warm milk at bedtime</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-2">
-                        <button class="text-ayur-green-600 hover:text-ayur-green-700 text-sm font-medium">
-                            <i class="fa-solid fa-eye mr-1"></i> View
-                        </button>
-                        <button class="text-ayur-brown-600 hover:text-ayur-brown-700 text-sm font-medium">
-                            <i class="fa-solid fa-print mr-1"></i> Print
-                        </button>
+            @if ($prescriptions->count() > 0)
+                <div class="flex items-center justify-between mt-6">
+                    <div class="text-sm text-ayur-brown-600">
+                        Showing <span class="font-medium">{{ $prescriptions->count() }}</span>
+                        prescription{{ $prescriptions->count() != 1 ? 's' : '' }}
                     </div>
                 </div>
-            </div>
-
-            <div class="flex items-center justify-between mt-6">
-                <div class="text-sm text-ayur-brown-600">
-                    Showing <span class="font-medium">1</span> to <span class="font-medium">2</span> of <span
-                        class="font-medium">8</span> prescriptions
-                </div>
-                <div class="flex space-x-2">
-                    <button
-                        class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-ayur-brown-600 bg-white hover:bg-ayur-offwhite">
-                        Previous
-                    </button>
-                    <button
-                        class="px-3 py-1 border border-ayur-green-500 rounded-md text-sm font-medium text-white bg-ayur-green-500 hover:bg-ayur-green-600">
-                        1
-                    </button>
-                    <button
-                        class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-ayur-brown-600 bg-white hover:bg-ayur-offwhite">
-                        2
-                    </button>
-                    <button
-                        class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-ayur-brown-600 bg-white hover:bg-ayur-offwhite">
-                        Next
-                    </button>
-                </div>
-            </div>
+            @endif
         </div>
 
 

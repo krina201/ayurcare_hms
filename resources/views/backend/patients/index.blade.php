@@ -3,9 +3,9 @@
 @section('content')
     <main class="p-4">
         <div class="mb-4">
-            @if (session('status'))
+            @if (session('success'))
                 <div class="bg-green-50 text-green-700 px-4 py-2 rounded border border-green-200">
-                    {{ session('status') }}</div>
+                    {{ session('success') }}</div>
             @endif
             @if ($errors->any())
                 <div class="bg-red-50 text-red-700 px-4 py-2 rounded border border-red-200">
@@ -17,7 +17,6 @@
                 </div>
             @endif
         </div>
-
         <div class="mb-4">
             <div class="border-b border-gray-200">
                 <nav class="flex -mb-px" role="tablist">
@@ -853,8 +852,78 @@
     </script>
 
     <script>
+        // Function to show success message using existing session message style
+        function showSessionSuccessMessage(message) {
+            // Find the existing message container or create one
+            let messageContainer = document.querySelector('.mb-4');
+            if (!messageContainer) {
+                messageContainer = document.createElement('div');
+                messageContainer.className = 'mb-4';
+                document.querySelector('main').insertBefore(messageContainer, document.querySelector('main').firstChild);
+            }
+
+            // Remove any existing success/error messages
+            const existingMessages = messageContainer.querySelectorAll('.bg-green-50, .bg-red-50');
+            existingMessages.forEach(msg => msg.remove());
+
+            // Create success message div
+            const successDiv = document.createElement('div');
+            successDiv.className = 'bg-green-50 text-green-700 px-4 py-2 rounded border border-green-200';
+            successDiv.textContent = message;
+
+            messageContainer.appendChild(successDiv);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+
+            // Scroll to top to show the message
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Function to show error message using existing session message style
+        function showSessionErrorMessage(message) {
+            // Find the existing message container or create one
+            let messageContainer = document.querySelector('.mb-4');
+            if (!messageContainer) {
+                messageContainer = document.createElement('div');
+                messageContainer.className = 'mb-4';
+                document.querySelector('main').insertBefore(messageContainer, document.querySelector('main').firstChild);
+            }
+
+            // Remove any existing success/error messages
+            const existingMessages = messageContainer.querySelectorAll('.bg-green-50, .bg-red-50');
+            existingMessages.forEach(msg => msg.remove());
+
+            // Create error message div
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'bg-red-50 text-red-700 px-4 py-2 rounded border border-red-200';
+            errorDiv.innerHTML = `<ul class="list-disc list-inside"><li>${message}</li></ul>`;
+
+            messageContainer.appendChild(errorDiv);
+
+            // Auto remove after 6 seconds
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 6000);
+
+            // Scroll to top to show the message
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
         function showError(input, message) {
-            const parent = input.closest('div');
+            // Handle both element objects and IDs
+            const element = typeof input === 'string' ? document.getElementById(input) : input;
+            if (!element) return;
+
+            const parent = element.closest('div');
             let hint = parent.querySelector('.input-error');
             if (!hint) {
                 hint = document.createElement('p');
@@ -862,14 +931,18 @@
                 parent.appendChild(hint);
             }
             hint.textContent = message;
-            input.classList.add('border-red-500');
+            element.classList.add('border-red-500');
         }
 
         function clearError(input) {
-            const parent = input.closest('div');
+            // Handle both element objects and IDs
+            const element = typeof input === 'string' ? document.getElementById(input) : input;
+            if (!element) return;
+
+            const parent = element.closest('div');
             const hint = parent.querySelector('.input-error');
             if (hint) hint.remove();
-            input.classList.remove('border-red-500');
+            element.classList.remove('border-red-500');
         }
 
         function showGroupError(container, message) {
@@ -891,10 +964,17 @@
             }
         }
 
+        // Email validation helper function
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
         function validateForm() {
             const form = document.getElementById('patient-form');
             let valid = true;
 
+            // Full Name validation
             const fullName = document.getElementById('full_name');
             if (!fullName.value.trim()) {
                 showError(fullName, 'Full name is required');
@@ -903,9 +983,9 @@
                 clearError(fullName);
             }
 
-            // email
-            const email = fields.email && fields.email.value.trim();
-            clearError('email');
+            // Email validation
+            const emailField = document.getElementById('email');
+            const email = emailField.value.trim();
             if (!email) {
                 showError('email', 'Email field is required.');
                 valid = false;
@@ -915,8 +995,11 @@
             } else if (email.length > 255) {
                 showError('email', 'Email may not be greater than 255 characters.');
                 valid = false;
+            } else {
+                clearError('email');
             }
 
+            // Gender validation
             const genderChecked = !!form.querySelector('input[name="gender"]:checked');
             const genderContainer = form.querySelector('input[name="gender"]').closest('div');
             if (!genderChecked) {
@@ -926,6 +1009,7 @@
                 clearGroupError(genderContainer);
             }
 
+            // Age validation
             const age = document.getElementById('age');
             const ageVal = parseInt(age.value, 10);
             if (!age.value || isNaN(ageVal) || ageVal < 0 || ageVal > 150) {
@@ -935,30 +1019,43 @@
                 clearError(age);
             }
 
+            // Mobile validation
             const mobile = document.getElementById('mobile');
-            if (!/^[0-9]{10}$/.test(mobile.value)) {
+            if (!mobile.value.trim()) {
+                showError(mobile, 'Mobile number is required');
+                valid = false;
+            } else if (!/^[0-9]{10}$/.test(mobile.value.trim())) {
                 showError(mobile, 'Enter a valid 10-digit mobile number');
                 valid = false;
             } else {
                 clearError(mobile);
             }
 
+            // Emergency contact validation
             const emergency = document.getElementById('emergency_contact');
-            if (!/^[0-9]{10}$/.test(emergency.value)) {
+            if (!emergency.value.trim()) {
+                showError(emergency, 'Emergency contact is required');
+                valid = false;
+            } else if (!/^[0-9]{10}$/.test(emergency.value.trim())) {
                 showError(emergency, 'Emergency contact must be 10 digits');
                 valid = false;
             } else {
                 clearError(emergency);
             }
 
+            // Aadhaar validation
             const aadhaar = document.getElementById('aadhaar_number');
-            if (!/^[0-9]{12}$/.test(aadhaar.value)) {
+            if (!aadhaar.value.trim()) {
+                showError(aadhaar, 'Aadhaar number is required');
+                valid = false;
+            } else if (!/^[0-9]{12}$/.test(aadhaar.value.trim())) {
                 showError(aadhaar, 'Aadhaar must be 12 digits');
                 valid = false;
             } else {
                 clearError(aadhaar);
             }
 
+            // Address validation
             const address = document.getElementById('address');
             if (!address.value.trim()) {
                 showError(address, 'Address is required');
@@ -967,14 +1064,16 @@
                 clearError(address);
             }
 
+            // Allergies validation
             const allergies = document.getElementById('allergies');
             if (!allergies.value.trim()) {
-                showError(allergies, 'Allergies are required');
+                showError(allergies, 'Allergies field is required');
                 valid = false;
             } else {
                 clearError(allergies);
             }
 
+            // Prakriti validation
             const prakriti = document.getElementById('prakriti');
             if (!prakriti.value) {
                 showError(prakriti, 'Prakriti is required');
@@ -983,6 +1082,7 @@
                 clearError(prakriti);
             }
 
+            // Registration date validation
             const regDate = document.getElementById('registration_date');
             if (!regDate.value) {
                 showError(regDate, 'Registration date is required');
@@ -991,6 +1091,7 @@
                 clearError(regDate);
             }
 
+            // Registration type validation
             const regTypeChecked = !!form.querySelector('input[name="registration_type"]:checked');
             const regTypeContainer = form.querySelector('input[name="registration_type"]').closest('div');
             if (!regTypeChecked) {
@@ -1000,7 +1101,7 @@
                 clearGroupError(regTypeContainer);
             }
 
-            // At least one dosha must be selected
+            // Dosha validation - at least one must be selected
             const doshaChecked = !!form.querySelector('input[name="doshas[]"]:checked');
             const doshaContainer = form.querySelector('input[name="doshas[]"]').closest('div');
             if (!doshaChecked) {
@@ -1010,7 +1111,7 @@
                 clearGroupError(doshaContainer);
             }
 
-            // Photo required only when creating or when no existing photo
+            // Photo validation - required only when creating or when no existing photo
             const photo = document.getElementById('photo');
             const photoContainer = document.getElementById('photo-drop') || photo.closest('.border-dashed') || photo
                 .closest('div');
@@ -1026,9 +1127,77 @@
         }
 
         document.getElementById('patient-form').addEventListener('submit', function(e) {
-            if (!validateForm()) {
-                e.preventDefault();
-                e.stopPropagation();
+            e.preventDefault(); // Always prevent default submission
+            e.stopPropagation();
+
+            if (validateForm()) {
+                // If validation passes, show loading state
+                const submitBtn = document.getElementById('submitBtn');
+                const originalText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Processing...';
+
+                // Submit the form programmatically
+                const formData = new FormData(this);
+                const url = this.action;
+                const method = this.method;
+
+                fetch(url, {
+                        method: method,
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                                'content') || '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        }
+                        throw new Error('Network response was not ok');
+                    })
+                    .then(data => {
+                        // Success - show success message using the existing session message display
+                        showSessionSuccessMessage(
+                            '{{ isset($patient) ? 'Patient updated successfully!' : 'Patient registered successfully!' }}'
+                        );
+
+                        // Handle form after success
+                        @if (!isset($patient))
+                            setTimeout(() => {
+                                this.reset(); // Reset form for new registration
+                                document.querySelectorAll('.input-error').forEach(error => error
+                                    .remove());
+                                document.querySelectorAll('.border-red-500').forEach(el => el.classList
+                                    .remove('border-red-500'));
+                                document.querySelectorAll('.ring-red-500').forEach(el => el.classList
+                                    .remove('ring-1', 'ring-red-500', 'rounded-md'));
+                            }, 1000);
+                        @else
+                            setTimeout(() => {
+                                window.location.href =
+                                    '{{ route('patients') }}'; // Redirect after edit
+                            }, 2000);
+                        @endif
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showSessionErrorMessage('Something went wrong. Please try again.');
+                    })
+                    .finally(() => {
+                        // Restore button state
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    });
+            } else {
+                // Scroll to first error
+                const firstError = document.querySelector('.border-red-500, .ring-red-500');
+                if (firstError) {
+                    firstError.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
             }
         });
 
