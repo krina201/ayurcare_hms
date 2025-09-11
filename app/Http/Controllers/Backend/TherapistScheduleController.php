@@ -26,81 +26,113 @@ class TherapistScheduleController extends Controller
         $pagename = 'Therapist Schedule';
         $breadcrumb = 'Therapist Schedule';
 
-        try {
-            // Get selected date from request or default to today
-            $selectedDate = $request->get('date', today()->format('Y-m-d'));
-            $carbonDate = Carbon::parse($selectedDate);
+        // Get selected date from request or default to today
+        $selectedDate = $request->get('date', today()->format('Y-m-d'));
+        $carbonDate = Carbon::parse($selectedDate);
 
-            // Get all active therapists (doctors)
-            $therapists = Doctor::with(['department'])
-                ->where('status', 1)
-                ->orderBy('full_name')
-                ->get();
+        // Get all active therapists (doctors)
+        $therapists = Doctor::with(['department'])
+            ->where('status', 1)
+            ->orderBy('full_name')
+            ->get();
 
-            // Get assignments for the selected date
-            $assignments = TherapistAssignment::with([
-                'patient' => function ($query) {
-                    $query->select('id', 'uhid', 'full_name', 'age', 'gender', 'photo_path');
-                },
-                'therapist' => function ($query) {
-                    $query->select('id', 'full_name', 'photo');
-                },
-                'room' => function ($query) {
-                    $query->select('id', 'room_name', 'room_number');
-                },
-                'treatmentPlan' => function ($query) {
-                    $query->select('id', 'treatment_details');
-                }
-            ])
-                ->whereDate('assignment_date', $selectedDate)
-                ->orderBy('start_time')
-                ->get();
+        // Get assignments for the selected date
+        $assignments = TherapistAssignment::with([
+            'patient' => function ($query) {
+                $query->select('id', 'uhid', 'full_name', 'age', 'gender', 'photo_path');
+            },
+            'therapist' => function ($query) {
+                $query->select('id', 'full_name', 'photo');
+            },
+            'room' => function ($query) {
+                $query->select('id', 'room_number', 'room_type');
+            },
+            'treatmentPlan' => function ($query) {
+                $query->select('id', 'patient_id', 'procedure_name', 'treatment_category');
+            },
+            'treatmentPlan.treatmentCategory' => function ($query) {
+                $query->select('id', 'name');
+            }
+        ])
+            ->whereDate('assignment_date', $selectedDate)
+            ->orderBy('start_time')
+            ->get();
 
-            // Group assignments by therapist and time slot
-            $scheduleData = $this->buildScheduleData($therapists, $assignments, $selectedDate);
+        // Get all appointments for today (for the "Today's Appointments" section)
+        $todaysAppointments = TherapistAssignment::with([
+            'patient' => function ($query) {
+                $query->select('id', 'uhid', 'full_name', 'age', 'gender', 'photo_path');
+            },
+            'therapist' => function ($query) {
+                $query->select('id', 'full_name', 'photo');
+            },
+            'room' => function ($query) {
+                $query->select('id', 'room_number', 'room_type');
+            },
+            'treatmentPlan' => function ($query) {
+                $query->select('id', 'patient_id', 'procedure_name', 'treatment_category');
+            },
+            'treatmentPlan.treatmentCategory' => function ($query) {
+                $query->select('id', 'name');
+            }
+        ])
+            ->whereDate('assignment_date', today())
+            ->orderBy('start_time')
+            ->get();
 
-            // Get today's appointment statistics
-            $stats = $this->getScheduleStats($selectedDate);
+        // If no assignments for selected date, show the most recent date with data
+        if ($assignments->isEmpty()) {
+            $latestAssignment = TherapistAssignment::orderBy('assignment_date', 'desc')->first();
+            if ($latestAssignment) {
+                $selectedDate = $latestAssignment->assignment_date->format('Y-m-d');
+                $carbonDate = Carbon::parse($selectedDate);
 
-            // Get available rooms
-            $rooms = MasterRoom::where('status', 1)->get();
-
-            // Get treatment categories
-            $treatmentCategories = MasterTreatmentCategory::where('status', 1)->get();
-
-            return view('backend.doctor.therapist_schedule', compact(
-                'pagename',
-                'breadcrumb',
-                'therapists',
-                'assignments',
-                'scheduleData',
-                'stats',
-                'selectedDate',
-                'carbonDate',
-                'rooms',
-                'treatmentCategories'
-            ));
-        } catch (\Exception $e) {
-            Log::error('Therapist Schedule Index Error: ' . $e->getMessage());
-
-            return view('backend.doctor.therapist_schedule', [
-                'pagename' => $pagename,
-                'breadcrumb' => $breadcrumb,
-                'therapists' => collect(),
-                'assignments' => collect(),
-                'scheduleData' => [],
-                'stats' => [
-                    'total' => 0,
-                    'active' => 0,
-                    'pending' => 0,
-                    'completed' => 0
-                ],
-                'selectedDate' => today()->format('Y-m-d'),
-                'carbonDate' => today(),
-                'rooms' => collect(),
-                'treatmentCategories' => collect()
-            ]);
+                // Re-fetch assignments for the latest date
+                $assignments = TherapistAssignment::with([
+                    'patient' => function ($query) {
+                        $query->select('id', 'uhid', 'full_name', 'age', 'gender', 'photo_path');
+                    },
+                    'therapist' => function ($query) {
+                        $query->select('id', 'full_name', 'photo');
+                    },
+                    'room' => function ($query) {
+                        $query->select('id', 'room_number', 'room_type');
+                    },
+                    'treatmentPlan' => function ($query) {
+                        $query->select('id', 'procedure_name');
+                    }
+                ])
+                    ->whereDate('assignment_date', $selectedDate)
+                    ->orderBy('start_time')
+                    ->get();
+            }
         }
+
+        // Group assignments by therapist and time slot
+        $scheduleData = $this->buildScheduleData($therapists, $assignments, $selectedDate);
+
+        // Get appointment statistics for the selected date
+        $stats = $this->getScheduleStats(today());
+
+        // Get available rooms
+        $rooms = MasterRoom::where('status', 1)->get();
+
+        // Get treatment categories
+        $treatmentCategories = MasterTreatmentCategory::where('status', 1)->get();
+
+        return view('backend.doctor.therapist_schedule', compact(
+            'pagename',
+            'breadcrumb',
+            'therapists',
+            'assignments',
+            'todaysAppointments',
+            'scheduleData',
+            'stats',
+            'selectedDate',
+            'carbonDate',
+            'rooms',
+            'treatmentCategories'
+        ));
     }
 
     /**
@@ -121,8 +153,19 @@ class TherapistScheduleController extends Controller
 
             foreach ($timeSlots as $timeSlot) {
                 $slotAssignments = $therapistAssignments->filter(function ($assignment) use ($timeSlot) {
-                    $startTime = Carbon::parse($assignment->start_time)->format('H:i');
-                    return $startTime === $timeSlot['time'];
+                    // Handle different time formats
+                    $startTime = $assignment->start_time;
+                    if (is_string($startTime)) {
+                        $startTime = Carbon::parse($startTime)->format('H:i');
+                    } else {
+                        $startTime = $startTime->format('H:i');
+                    }
+
+                    // Match exact time or within the hour slot
+                    $slotHour = intval($timeSlot['time']);
+                    $assignmentHour = intval($startTime);
+
+                    return $startTime === $timeSlot['time'] || $assignmentHour === $slotHour;
                 });
 
                 $scheduleData[$therapist->id]['timeSlots'][$timeSlot['time']] = [
@@ -293,10 +336,10 @@ class TherapistScheduleController extends Controller
                     $query->select('id', 'full_name', 'photo');
                 },
                 'room' => function ($query) {
-                    $query->select('id', 'room_name', 'room_number');
+                    $query->select('id', 'room_number', 'room_type');
                 },
                 'treatmentPlan' => function ($query) {
-                    $query->select('id', 'treatment_details');
+                    $query->select('id', 'procedure_name');
                 }
             ])
                 ->whereDate('assignment_date', $date)

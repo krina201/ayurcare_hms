@@ -19,6 +19,10 @@ use App\Http\Controllers\Backend\PharmacyController;
 use App\Http\Controllers\Backend\TreatmentPlanController;
 use App\Http\Controllers\Backend\TherapistAssignmentController;
 use App\Http\Controllers\Backend\TherapistScheduleController;
+use App\Http\Controllers\Backend\TreatmentRoomController;
+use App\Http\Controllers\Backend\TreatmentTrackerController;
+use App\Http\Controllers\Backend\TreatmentFeedbackController;
+use App\Http\Controllers\Backend\BillController;
 
 
 Route::get('/', function () {
@@ -97,6 +101,7 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::get('/appointment/doctor-fees', [AppointmentController::class, 'getDoctorFees'])->name('appointment.doctor-fees');
     Route::get('/appointment/doctor-time-slots', [AppointmentController::class, 'getDoctorTimeSlots'])->name('appointment.doctor-time-slots');
     Route::get('/appointment/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
+    Route::patch('/appointment/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointment.update-status');
 
     // Calendar API Routes
     Route::get('/calendar/data', [CalendarApiController::class, 'getCalendarData'])->name('calendar.data');
@@ -120,6 +125,10 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::post('/pharmacy/store', [PharmacyController::class, 'store'])->name('pharmacy.store');
     Route::GET('/pharmacy/dispense', [PharmacyController::class, 'dispense'])->name('pharmacy.dispense');
     Route::get('/pharmacy/restock', [PharmacyController::class, 'restock'])->name('pharmacy.restock');
+    Route::post('/pharmacy/restock', [PharmacyController::class, 'storeRestock'])->name('pharmacy.restock.store');
+    Route::get('/pharmacy/restocks', [PharmacyController::class, 'allRestocks'])->name('pharmacy.restocks');
+    Route::get('/pharmacy/restock/{id}', [PharmacyController::class, 'viewRestock'])->name('pharmacy.restock.view');
+    Route::patch('/pharmacy/restock/{id}/status', [PharmacyController::class, 'updateRestockStatus'])->name('pharmacy.restock.update-status');
 
     // Pharmacy API Routes (must come before parameterized routes)
     Route::get('/pharmacy/search-patient', [PharmacyController::class, 'searchPatient'])->name('pharmacy.search-patient');
@@ -127,6 +136,7 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::get('/pharmacy/get-prescriptions', [PharmacyController::class, 'getPatientPrescriptions'])->name('pharmacy.get-prescriptions');
     Route::get('/pharmacy/inventory', [PharmacyController::class, 'getMedicineInventory'])->name('pharmacy.inventory');
     Route::get('/pharmacy/available-medicines', [PharmacyController::class, 'getAvailableMedicines'])->name('pharmacy.available-medicines');
+    Route::get('/pharmacy/medicine-details', [PharmacyController::class, 'getMedicineDetails'])->name('pharmacy.medicine-details');
     Route::post('/pharmacy/process-dispense', [PharmacyController::class, 'processDispense'])->name('pharmacy.process-dispense');
     Route::post('/pharmacy/store-dispense-form', [PharmacyController::class, 'storeDispenseForm'])->name('pharmacy.store-dispense-form');
     Route::get('/pharmacy/dispensations', [PharmacyController::class, 'allDispensations'])->name('pharmacy.dispensations');
@@ -144,12 +154,25 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::get('/treatment-plan/therapists-by-category', [TreatmentPlanController::class, 'getTherapistsByCategory'])->name('treatment-plan.therapists-by-category');
 
     // Parameterized treatment plan routes (must come after API routes)
-    Route::get('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'show'])->name('treatment-plan.show');
     Route::get('/treatment-plan/{treatmentPlan}/edit', [TreatmentPlanController::class, 'edit'])->name('treatment-plan.edit');
     Route::patch('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'update'])->name('treatment-plan.update');
     Route::delete('/treatment-plan/{treatmentPlan}', [TreatmentPlanController::class, 'destroy'])->name('treatment-plan.delete');
     Route::patch('/treatment-plan/{treatmentPlan}/status', [TreatmentPlanController::class, 'updateStatus'])->name('treatment-plan.update-status');
-    // Route::get('/treatment-plan/{treatmentPlan}/download-consent', [TreatmentPlanController::class, 'downloadConsent'])->name('treatment-plan.download-consent');
+
+    // Treatment Tracker Routes
+    Route::get('/treatment-plan/{treatmentPlan}/tracker', [TreatmentTrackerController::class, 'show'])->name('treatment-plan.tracker');
+    Route::post('/treatment-tracker', [TreatmentTrackerController::class, 'store'])->name('treatment-tracker.store');
+    Route::get('/treatment-tracker/{tracker}/details', [TreatmentTrackerController::class, 'getSessionDetails'])->name('treatment-tracker.details');
+    Route::post('/treatment-tracker/{tracker}/cancel', [TreatmentTrackerController::class, 'cancel'])->name('treatment-tracker.cancel');
+    Route::delete('/treatment-tracker/{tracker}/image', [TreatmentTrackerController::class, 'deleteImage'])->name('treatment-tracker.delete-image');
+
+    // Treatment Feedback Routes
+    Route::get('/treatment-feedback', [TreatmentFeedbackController::class, 'index'])->name('treatment-plan.feedback');
+    Route::post('/treatment-feedback', [TreatmentFeedbackController::class, 'store'])->name('treatment-plan.feedback.store');
+    Route::get('/treatment-feedback/search-patient', [TreatmentFeedbackController::class, 'searchPatient'])->name('treatment-plan.feedback.search-patient');
+    Route::get('/treatment-feedback/patient-details', [TreatmentFeedbackController::class, 'getPatientDetails'])->name('treatment-plan.feedback.patient-details');
+    Route::get('/treatment-feedback/treatment-plan-details', [TreatmentFeedbackController::class, 'getTreatmentPlanDetails'])->name('treatment-plan.feedback.treatment-plan-details');
+    Route::get('/treatment-feedback/previous-evaluations', [TreatmentFeedbackController::class, 'getPreviousEvaluations'])->name('treatment-plan.feedback.previous-evaluations');
 
     // Therapist Assignment Routes
     Route::get('/therapist-assignment', [TherapistAssignmentController::class, 'index'])->name('doctor.therapist-assignment');
@@ -165,4 +188,33 @@ Route::group(['middleware' =>  ['auth'], 'prefix' => 'admin'], function () {
     Route::get('/therapist-schedule/therapist-status', [TherapistScheduleController::class, 'getTherapistStatus'])->name('therapist-schedule.therapist-status');
     Route::get('/therapist-schedule/schedule-data', [TherapistScheduleController::class, 'getScheduleData'])->name('therapist-schedule.schedule-data');
     Route::patch('/therapist-schedule/{assignment}/status', [TherapistScheduleController::class, 'updateStatus'])->name('therapist-schedule.update-status');
+
+    // Treatment Room Routes
+    Route::get('/treatment-room', [TreatmentRoomController::class, 'index'])->name('doctor.treatment-room');
+    Route::get('/treatment-room/booking-form-data', [TreatmentRoomController::class, 'getBookingFormData'])->name('treatment-room.booking-form-data');
+    Route::post('/treatment-room/booking', [TreatmentRoomController::class, 'storeBooking'])->name('treatment-room.store-booking');
+    Route::get('/treatment-room/search-patients', [TreatmentRoomController::class, 'searchPatients'])->name('treatment-room.search-patients');
+    Route::get('/treatment-room/{room}/details', [TreatmentRoomController::class, 'getRoomDetails'])->name('treatment-room.room-details');
+    Route::get('/treatment-room/filter-options', [TreatmentRoomController::class, 'getFilterOptions'])->name('treatment-room.filter-options');
+    Route::post('/treatment-room/filter', [TreatmentRoomController::class, 'filterRooms'])->name('treatment-room.filter');
+    Route::patch('/treatment-room/{assignment}/status', [TreatmentRoomController::class, 'updateStatus'])->name('treatment-room.update-status');
+
+    // Bill Routes
+    Route::get('/bill', [BillController::class, 'index'])->name('bill');
+    Route::get('/bill/create', [BillController::class, 'create'])->name('bill.create');
+    Route::post('/bill', [BillController::class, 'store'])->name('bill.store');
+
+    // Bill API Routes (must come before parameterized routes)
+    Route::get('/bill/search-patient', [BillController::class, 'searchPatient'])->name('bill.search-patient');
+    Route::get('/bill/patient-bills', [BillController::class, 'getPatientBills'])->name('bill.patient-bills');
+    Route::get('/bill/appointment-data', [BillController::class, 'getAppointmentData'])->name('bill.appointment-data');
+    Route::get('/bill/prescription-data', [BillController::class, 'getPrescriptionData'])->name('bill.prescription-data');
+    Route::get('/bill/export', [BillController::class, 'export'])->name('bill.export');
+
+    // Parameterized bill routes (must come after API routes)
+    Route::get('/bill/{bill}', [BillController::class, 'show'])->name('bill.show');
+    Route::get('/bill/{bill}/edit', [BillController::class, 'edit'])->name('bill.edit');
+    Route::patch('/bill/{bill}', [BillController::class, 'update'])->name('bill.update');
+    Route::delete('/bill/{bill}', [BillController::class, 'destroy'])->name('bill.delete');
+    Route::post('/bill/{bill}/payment', [BillController::class, 'processPayment'])->name('bill.payment');
 });

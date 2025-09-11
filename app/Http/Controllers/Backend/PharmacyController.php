@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Medicine;
 use App\Models\MedicineDispense;
 use App\Models\MedicineDispenseItem;
+use App\Models\MedicineRestock;
+use App\Models\MedicineRestockItem;
 use App\Models\MasterMedicineType;
 use App\Models\MasterMedicineCategory;
 use App\Models\MasterManufacturer;
@@ -14,6 +16,9 @@ use App\Models\MasterPaymentMode;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\User;
+use App\Models\VendorMaster;
+use App\Models\Bill;
+use App\Services\PatientSearchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +28,12 @@ use Illuminate\Support\Facades\Schema;
 
 class PharmacyController extends Controller
 {
+    protected $patientSearchService;
+
+    public function __construct(PatientSearchService $patientSearchService)
+    {
+        $this->patientSearchService = $patientSearchService;
+    }
 
     //   Display the pharmacy dashboard
     public function index()
@@ -455,110 +466,7 @@ class PharmacyController extends Controller
     //  Search patient by UHID, name, or mobile (using Appointment module pattern)
     public function searchPatient(Request $request)
     {
-        try {
-            // Log the incoming request
-            Log::info("Pharmacy patient search request received", [
-                'method' => $request->method(),
-                'url' => $request->fullUrl(),
-                'query' => $request->all(),
-                'user_agent' => $request->userAgent(),
-                'ip' => $request->ip()
-            ]);
-
-            $query = trim($request->get('query', ''));
-
-            if (empty($query) || strlen($query) < 2) {
-                Log::info("Pharmacy patient search: Query too short or empty", ['query' => $query]);
-                return response()->json([]);
-            }
-
-            // Sanitize the query to prevent SQL injection
-            $query = strip_tags($query);
-
-            // Log the search attempt for debugging
-            Log::info("Pharmacy patient search attempt", [
-                'query' => $query,
-                'user_id' => Auth::id(),
-                'timestamp' => now()
-            ]);
-
-            // Check if Patient model exists and is accessible
-            if (!class_exists(Patient::class)) {
-                Log::error("Patient model not found");
-                throw new \Exception("Patient model not accessible");
-            }
-
-            // Check database connection
-            try {
-                DB::connection()->getPdo();
-            } catch (\Exception $e) {
-                Log::error("Database connection failed: " . $e->getMessage());
-                throw new \Exception("Database connection failed");
-            }
-
-            // Search for patients with better error handling
-            $patients = Patient::where(function ($q) use ($query) {
-                $q->where('uhid', 'LIKE', "%{$query}%")
-                    ->orWhere('full_name', 'LIKE', "%{$query}%")
-                    ->orWhere('mobile', 'LIKE', "%{$query}%");
-            })
-                ->select([
-                    'id',
-                    'uhid',
-                    'full_name',
-                    'gender',
-                    'age',
-                    'mobile',
-                    'prakriti',
-                    'allergies',
-                    'photo_path'
-                ])
-                ->limit(10)
-                ->get();
-
-            // Log the search results for debugging
-            Log::info("Pharmacy patient search results", [
-                'query' => $query,
-                'count' => $patients->count(),
-                'results' => $patients->toArray()
-            ]);
-
-            // If no results found, return empty array
-            if ($patients->isEmpty()) {
-                Log::info("Pharmacy patient search: No results found", ['query' => $query]);
-                return response()->json([]);
-            }
-
-            // Format the results
-            $formattedPatients = $patients->map(function ($patient) {
-                return [
-                    'id' => $patient->id,
-                    'uhid' => $patient->uhid ?? 'N/A',
-                    'full_name' => $patient->full_name ?? 'N/A',
-                    'gender' => $patient->gender ?? 'N/A',
-                    'age' => $patient->age ?? 'N/A',
-                    'mobile' => $patient->mobile ?? 'N/A',
-                    'prakriti' => $patient->prakriti ?? 'N/A',
-                    'allergies' => $patient->allergies ?? 'None',
-                    'photo_path' => $patient->photo_path ?? null
-                ];
-            });
-
-            Log::info("Pharmacy patient search: Returning formatted results", [
-                'query' => $query,
-                'count' => $formattedPatients->count()
-            ]);
-
-            return response()->json($formattedPatients);
-        } catch (\Exception $e) {
-            Log::error('Pharmacy patient search error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                'error' => 'An error occurred while searching patients',
-                'message' => $e->getMessage()
-            ], 500);
-        }
+        return $this->patientSearchService->searchPatients($request, 'pharmacy');
     }
 
 
@@ -724,6 +632,9 @@ class PharmacyController extends Controller
 
             DB::commit();
 
+            // Create bill record for the dispense
+            $this->createBillForDispense($dispense, $request->total_amount);
+
             Log::info('Dispense completed successfully', [
                 'dispense_id' => $dispense->id,
                 'receipt_number' => $receiptNumber,
@@ -871,6 +782,10 @@ class PharmacyController extends Controller
             }
 
             DB::commit();
+
+            // Create bill record for the dispense
+            $this->createBillForDispense($dispense, $totalAmount);
+
             Log::info('Dispense completed successfully');
 
             return redirect()->route('pharmacy.dispense')
@@ -942,8 +857,347 @@ class PharmacyController extends Controller
         $pagename = 'Restock Medicine';
         $breadcrumb = 'Restock Medicine';
 
-        $medicines = Medicine::orderBy('name')->get();
+        // Get master data for dropdowns
+        $medicines = Medicine::with(['medicineType', 'medicineCategory', 'manufacturer', 'measurement'])
+            ->where('status', 1)
+            ->orderBy('name')
+            ->get();
 
-        return view('backend.pharmacy.restock', compact('pagename', 'breadcrumb', 'medicines'));
+        $vendors = VendorMaster::orderBy('name')->get();
+        $paymentModes = MasterPaymentMode::orderBy('name')->get();
+        $measurements = MasterMeasurement::orderBy('name')->get();
+
+        // Get recent restocks
+        $recentRestocks = MedicineRestock::with(['vendor', 'paymentMode', 'createdBy'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('backend.pharmacy.restock', compact(
+            'pagename',
+            'breadcrumb',
+            'medicines',
+            'vendors',
+            'paymentModes',
+            'measurements',
+            'recentRestocks'
+        ));
+    }
+
+    /**
+     * Store restock purchase
+     */
+    public function storeRestock(Request $request)
+    {
+        // Validate the request data
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'purchase_date' => 'required|date',
+                'invoice_number' => 'required|string|max:255',
+                'invoice_date' => 'required|date',
+                'vendor_id' => 'required|exists:vendor_master,id',
+                'vendor_contact' => 'required|string|size:10|regex:/^[0-9]{10}$/',
+                'gstin' => 'nullable|string|max:20',
+                'payment_mode_id' => 'required|exists:master_payment_mode,id',
+                'notes' => 'nullable|string',
+                'invoice_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+                'items' => 'required|array|min:1',
+                'items.*.medicine_id' => 'required|exists:medicines,id',
+                'items.*.batch_number' => 'required|string|max:100',
+                'items.*.manufacturing_date' => 'required|date',
+                'items.*.expiry_date' => 'required|date|after:items.*.manufacturing_date',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.measurement_id' => 'required|exists:master_measurement,id',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'subtotal' => 'required|numeric|min:0',
+                'discount' => 'nullable|numeric|min:0',
+                'gst_amount' => 'required|numeric|min:0',
+                'total_amount' => 'required|numeric|min:0',
+                'save_type' => 'required|in:0,1'
+            ],
+
+        );
+
+        // If validation fails, redirect back with errors
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $validatedData = $validator->validated();
+
+        // Generate purchase ID
+        $lastRestock = MedicineRestock::orderBy('id', 'desc')->first();
+        $purchaseId = 'PUR-' . date('Y') . '-' . str_pad(($lastRestock ? $lastRestock->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+
+        // Handle file upload
+        $invoiceFilePath = null;
+        if ($request->hasFile('invoice_file')) {
+            $file = $request->file('invoice_file');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('backend-assets/media/uploads/invoices'), $fileName);
+            $invoiceFilePath = 'backend-assets/media/uploads/invoices/' . $fileName;
+        }
+
+        // Create new restock instance
+        $restock = new MedicineRestock();
+        $restock->purchase_id = $purchaseId;
+        $restock->purchase_date = $validatedData['purchase_date'];
+        $restock->invoice_number = $validatedData['invoice_number'];
+        $restock->invoice_date = $validatedData['invoice_date'];
+        $restock->vendor_id = $validatedData['vendor_id'];
+        $restock->vendor_contact = $validatedData['vendor_contact'];
+        $restock->gstin = $validatedData['gstin'] ?? null;
+        $restock->payment_mode_id = $validatedData['payment_mode_id'];
+        $restock->notes = $validatedData['notes'] ?? null;
+        $restock->invoice_file_path = $invoiceFilePath;
+        $restock->subtotal = $validatedData['subtotal'];
+        $restock->discount = $validatedData['discount'] ?? 0;
+        $restock->gst_amount = $validatedData['gst_amount'];
+        $restock->total_amount = $validatedData['total_amount'];
+        $restock->status = $validatedData['save_type'] == '1' ? 1 : 0;
+        $restock->created_by = Auth::id();
+
+        // Save the restock
+        if ($restock->save()) {
+            // Process each medicine item
+            foreach ($validatedData['items'] as $itemData) {
+                $totalPrice = $itemData['quantity'] * $itemData['unit_price'];
+
+                // Create new restock item instance
+                $restockItem = new MedicineRestockItem();
+                $restockItem->restock_id = $restock->id;
+                $restockItem->medicine_id = $itemData['medicine_id'];
+                $restockItem->batch_number = $itemData['batch_number'];
+                $restockItem->manufacturing_date = $itemData['manufacturing_date'];
+                $restockItem->expiry_date = $itemData['expiry_date'];
+                $restockItem->quantity = $itemData['quantity'];
+                $restockItem->measurement_id = $itemData['measurement_id'];
+                $restockItem->unit_price = $itemData['unit_price'];
+                $restockItem->total_price = $totalPrice;
+                $restockItem->save();
+
+                // Update medicine stock if status is completed
+                if ($validatedData['save_type'] == '1') {
+                    $medicine = Medicine::find($itemData['medicine_id']);
+                    $medicine->increment('initial_stock_quantity', $itemData['quantity']);
+
+                    // Update medicine details with latest batch info
+                    $medicine->update([
+                        'batch_number' => $itemData['batch_number'],
+                        'manufacturing_date' => $itemData['manufacturing_date'],
+                        'expiry_date' => $itemData['expiry_date'],
+                        'purchase_price' => $itemData['unit_price']
+                    ]);
+                }
+            }
+
+            $message = $validatedData['save_type'] == '1'
+                ? 'Restock purchase completed successfully!'
+                : 'Restock purchase saved as draft successfully!';
+
+            return redirect()->route('pharmacy.restock')->with('success', $message . ' Purchase ID: ' . $purchaseId);
+        } else {
+            return redirect()->route('pharmacy.restock')->with('error', 'Something went wrong while saving the Restock Purchase');
+        }
+    }
+
+    /**
+     * Get medicine details for restock
+     */
+    public function getMedicineDetails(Request $request)
+    {
+        $medicineId = $request->get('medicine_id');
+
+        if (!$medicineId) {
+            return response()->json(['success' => false, 'message' => 'Medicine ID is required']);
+        }
+
+        $medicine = Medicine::with(['medicineType', 'medicineCategory', 'manufacturer', 'measurement'])
+            ->find($medicineId);
+
+        if (!$medicine) {
+            return response()->json(['success' => false, 'message' => 'Medicine not found']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'medicine' => [
+                'id' => $medicine->id,
+                'name' => $medicine->name,
+                'code' => $medicine->code,
+                'type' => $medicine->medicineType->name ?? 'N/A',
+                'category' => $medicine->medicineCategory->name ?? 'N/A',
+                'manufacturer' => $medicine->manufacturer->name ?? 'N/A',
+                'measurement' => $medicine->measurement->name ?? 'N/A',
+                'current_stock' => $medicine->initial_stock_quantity,
+                'purchase_price' => $medicine->purchase_price,
+                'selling_price' => $medicine->selling_price
+            ]
+        ]);
+    }
+
+    /**
+     * Display all restock purchases
+     */
+    public function allRestocks()
+    {
+        $pagename = 'All Restock Purchases';
+        $breadcrumb = 'All Restock Purchases';
+
+        $restocks = MedicineRestock::with(['vendor', 'paymentMode', 'createdBy', 'items.medicine'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return view('backend.pharmacy.all_restocks', compact(
+            'pagename',
+            'breadcrumb',
+            'restocks'
+        ));
+    }
+
+    /**
+     * View restock details
+     */
+    public function viewRestock($id)
+    {
+        $restock = MedicineRestock::with([
+            'vendor',
+            'paymentMode',
+            'createdBy',
+            'items.medicine.medicineType',
+            'items.medicine.medicineCategory',
+            'items.medicine.manufacturer',
+            'items.measurement'
+        ])->findOrFail($id);
+
+        $pagename = 'Restock Details';
+        $breadcrumb = 'Restock Details';
+
+        return view('backend.pharmacy.view_restock', compact(
+            'pagename',
+            'breadcrumb',
+            'restock'
+        ));
+    }
+
+    /**
+     * Update restock status
+     */
+    public function updateRestockStatus(Request $request, $id)
+    {
+        $restock = MedicineRestock::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:draft,completed,cancelled'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid status'
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            $oldStatus = $restock->status;
+            $restock->update(['status' => $request->status]);
+
+            // If changing from draft to completed, update medicine stocks
+            if ($oldStatus === 'draft' && $request->status === 'completed') {
+                foreach ($restock->items as $item) {
+                    $medicine = Medicine::find($item->medicine_id);
+                    $medicine->increment('initial_stock_quantity', $item->quantity);
+
+                    // Update medicine details with latest batch info
+                    $medicine->update([
+                        'batch_number' => $item->batch_number,
+                        'manufacturing_date' => $item->manufacturing_date,
+                        'expiry_date' => $item->expiry_date,
+                        'purchase_price' => $item->unit_price
+                    ]);
+                }
+            }
+
+            // If changing from completed to draft, reverse stock updates
+            if ($oldStatus === 'completed' && $request->status === 'draft') {
+                foreach ($restock->items as $item) {
+                    $medicine = Medicine::find($item->medicine_id);
+                    $medicine->decrement('initial_stock_quantity', $item->quantity);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Restock status updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update restock status: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update restock status'
+            ]);
+        }
+    }
+
+    /**
+     * Create bill record for dispense
+     */
+    private function createBillForDispense($dispense, $totalAmount)
+    {
+        $invoiceNumber = $this->generateInvoiceNumber();
+
+        // Get dispense items for bill items
+        $billItems = [];
+        foreach ($dispense->items as $item) {
+            $billItems[] = [
+                'description' => $item->medicine->name,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'total' => $item->total_price
+            ];
+        }
+
+        $bill = Bill::create([
+            'invoice_number' => $invoiceNumber,
+            'patient_id' => $dispense->patient_id,
+            'dispense_id' => $dispense->id,
+            'invoice_date' => now()->toDateString(),
+            'due_date' => now()->addDays(30)->toDateString(),
+            'subtotal' => $dispense->subtotal,
+            'tax_amount' => $dispense->gst_amount,
+            'discount_amount' => 0,
+            'total_amount' => $totalAmount,
+            'paid_amount' => 0,
+            'status' => 1, // 1 = pending (as per migration comment)
+            'bill_items' => json_encode($billItems)
+        ]);
+
+        return $bill;
+    }
+
+    /**
+     * Generate unique invoice number
+     */
+    private function generateInvoiceNumber()
+    {
+        $prefix = 'INV';
+        $year = date('Y');
+        $lastBill = Bill::whereYear('created_at', $year)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($lastBill) {
+            $lastNumber = (int) substr($lastBill->invoice_number, -4);
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return $prefix . '-' . $year . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 }

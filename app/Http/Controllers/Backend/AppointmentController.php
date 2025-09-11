@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Bill;
 use App\Models\Patient;
 use App\Models\Doctor;
 use App\Models\Department;
+use App\Services\PatientSearchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -16,6 +18,12 @@ use Illuminate\Support\Facades\DB; // Added DB facade
 
 class AppointmentController extends Controller
 {
+    protected $patientSearchService;
+
+    public function __construct(PatientSearchService $patientSearchService)
+    {
+        $this->patientSearchService = $patientSearchService;
+    }
     /**
      * Display a listing of the resource.
      */
@@ -189,118 +197,7 @@ class AppointmentController extends Controller
 
     public function searchPatient(Request $request)
     {
-        try {
-            // Log the incoming request
-            Log::info("Patient search request received", [
-                'method' => $request->method(),
-                'url' => $request->fullUrl(),
-                'query' => $request->all(),
-                'user_agent' => $request->userAgent(),
-                'ip' => $request->ip()
-            ]);
-
-            $query = trim($request->get('query', ''));
-
-            if (empty($query) || strlen($query) < 2) {
-                Log::info("Patient search: Query too short or empty", ['query' => $query]);
-                return response()->json([]);
-            }
-
-            // Sanitize the query to prevent SQL injection
-            $query = strip_tags($query);
-
-            // Log the search attempt for debugging
-            Log::info("Patient search attempt", [
-                'query' => $query,
-                'user_id' => Auth::id(),
-                'timestamp' => now()
-            ]);
-
-            // Check if Patient model exists and is accessible
-            if (!class_exists(Patient::class)) {
-                Log::error("Patient model not found");
-                throw new \Exception("Patient model not accessible");
-            }
-
-            // Check database connection
-            try {
-                DB::connection()->getPdo();
-            } catch (\Exception $e) {
-                Log::error("Database connection failed: " . $e->getMessage());
-                throw new \Exception("Database connection failed");
-            }
-
-            // Search for patients with better error handling
-            $patients = Patient::where(function ($q) use ($query) {
-                $q->where('uhid', 'LIKE', "%{$query}%")
-                    ->orWhere('full_name', 'LIKE', "%{$query}%")
-                    ->orWhere('mobile', 'LIKE', "%{$query}%");
-            })
-                ->select([
-                    'id',
-                    'uhid',
-                    'full_name',
-                    'gender',
-                    'age',
-                    'mobile',
-                    'prakriti',
-                    'allergies',
-                    'photo_path'
-                ])
-                ->limit(10)
-                ->get();
-
-            // Log the search results for debugging
-            Log::info("Patient search results", [
-                'query' => $query,
-                'count' => $patients->count(),
-                'results' => $patients->toArray()
-            ]);
-
-            // If no results found, return empty array
-            if ($patients->isEmpty()) {
-                Log::info("Patient search: No results found", ['query' => $query]);
-                return response()->json([]);
-            }
-
-            // Format the results
-            $formattedPatients = $patients->map(function ($patient) {
-                return [
-                    'id' => $patient->id,
-                    'uhid' => $patient->uhid ?? 'N/A',
-                    'full_name' => $patient->full_name ?? 'N/A',
-                    'gender' => $patient->gender ?? 'N/A',
-                    'age' => $patient->age ?? 'N/A',
-                    'mobile' => $patient->mobile ?? 'N/A',
-                    'prakriti' => $patient->prakriti ?? 'N/A',
-                    'allergies' => $patient->allergies ?? 'None',
-                    'photo_path' => $patient->photo_path ?? null
-                ];
-            });
-
-            Log::info("Patient search: Returning formatted results", [
-                'query' => $query,
-                'formatted_count' => $formattedPatients->count()
-            ]);
-
-            return response()->json($formattedPatients);
-        } catch (\Exception $e) {
-            Log::error('Patient search error: ' . $e->getMessage(), [
-                'query' => $request->get('query'),
-                'user_id' => Auth::id(),
-                'trace' => $e->getTraceAsString(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return response()->json([
-                'error' => 'An error occurred while searching patients',
-                'message' => $e->getMessage(),
-                'debug_info' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            ], 500);
-        }
+        return $this->patientSearchService->searchPatients($request, 'appointment');
     }
 
 
@@ -562,6 +459,89 @@ class AppointmentController extends Controller
             'created_by' => Auth::id(),
         ]);
 
+        // Create bill record for the appointment
+        $this->createBillForAppointment($appointment, $fee);
+
         return redirect()->route('appointment')->with('success', 'Appointment booked successfully.');
+    }
+
+    /**
+     * Create bill record for appointment
+     */
+    private function createBillForAppointment($appointment, $fee)
+    {
+        $invoiceNumber = $this->generateInvoiceNumber();
+
+        $bill = Bill::create([
+            'invoice_number' => $invoiceNumber,
+            'patient_id' => $appointment->patient_id,
+            'appointment_id' => $appointment->id,
+            'invoice_date' => now()->toDateString(),
+            'due_date' => now()->addDays(30)->toDateString(),
+            'subtotal' => $fee,
+            'tax_amount' => 0,
+            'discount_amount' => 0,
+            'total_amount' => $fee,
+            'paid_amount' => 0,
+            'status' => 1, // 1 = pending (as per migration comment)
+            'bill_items' => json_encode([
+                [
+                    'description' => $appointment->appointment_type . ' Consultation - ' . $appointment->doctor->full_name,
+                    'quantity' => 1,
+                    'unit_price' => $fee,
+                    'total' => $fee
+                ]
+            ])
+        ]);
+    }
+
+    /**
+     * Generate unique invoice number
+     */
+    private function generateInvoiceNumber()
+    {
+        $prefix = 'INV';
+        $year = date('Y');
+        $lastBill = Bill::whereYear('created_at', $year)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($lastBill) {
+            $lastNumber = (int) substr($lastBill->invoice_number, -4);
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return $prefix . '-' . $year . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Update appointment status
+     */
+    public function updateStatus(Request $request, Appointment $appointment)
+    {
+        $request->validate([
+            'status' => 'required|in:Waiting,In Progress,Completed,Cancelled'
+        ]);
+
+        $oldStatus = $appointment->status;
+        $appointment->status = $request->status;
+        $appointment->save();
+
+        // If appointment is completed and there's no existing bill, create one
+        if ($request->status === 'Completed' && $oldStatus !== 'Completed') {
+            $existingBill = Bill::where('appointment_id', $appointment->id)->first();
+
+            if (!$existingBill) {
+                $this->createBillForAppointment($appointment, $appointment->fee);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Appointment status updated successfully',
+            'status' => $appointment->status
+        ]);
     }
 }

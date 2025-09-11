@@ -54,6 +54,26 @@ class Patient extends Model
         return $this->photo_path;
     }
 
+    // Accessor for first_name field (backward compatibility)
+    public function getFirstNameAttribute()
+    {
+        $nameParts = explode(' ', $this->full_name);
+        return $nameParts[0] ?? '';
+    }
+
+    // Accessor for last_name field (backward compatibility)
+    public function getLastNameAttribute()
+    {
+        $nameParts = explode(' ', $this->full_name);
+        return count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+    }
+
+    // Accessor for phone field (backward compatibility)
+    public function getPhoneAttribute()
+    {
+        return $this->mobile;
+    }
+
     // Relationship with prescriptions
     public function prescriptions()
     {

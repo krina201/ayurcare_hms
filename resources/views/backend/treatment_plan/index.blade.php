@@ -106,17 +106,18 @@
         <div id="panchkarmaTabs" class="mb-6">
             <div class="border-b border-gray-200">
                 <nav class="flex -mb-px">
-                    <button class="py-2 px-4 border-b-2 border-ayur-green-500 text-ayur-green-600 font-medium">
+                    <a href="{{ route('treatment-plan') }}"
+                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Treatment Plan Creation
-                    </button>
-                    <button
+                    </a>
+                    <a href="{{ route('treatment-plan .tracker') }}"
                         class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Day-wise Tracker
-                    </button>
-                    <button
+                    </a>
+                    <a href="{{ route('treatment-plan.feedback') }}"
                         class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Outcome &amp; Feedback
-                    </button>
+                    </a>
                 </nav>
             </div>
         </div>
@@ -145,6 +146,7 @@
                 @endif
                 <input type="hidden" id="patientId" name="patient_id"
                     value="{{ $isEdit ? $editTreatmentPlan->patient_id : '' }}">
+                <input type="hidden" id="dayWiseScheduleInput" name="day_wise_schedule" value="">
                 <div class="grid md:grid-cols-2 gap-6">
                     <!-- COLUMN 1 -->
                     <div class="space-y-4">
@@ -152,40 +154,8 @@
                             <label class="block text-sm font-medium text-ayur-brown-700">Patient <span
                                     class="text-red-500">*</span></label>
 
-                            <!-- Patient Selection Tabs -->
-                            <div class="mt-1 mb-2">
-                                <div class="flex space-x-1">
-                                    <button type="button" id="selectTab"
-                                        class="px-3 py-1 text-xs font-medium rounded-md bg-ayur-green-100 text-ayur-green-700 border border-ayur-green-300">
-                                        Select
-                                    </button>
-                                    <button type="button" id="searchTab"
-                                        class="px-3 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 border border-gray-300">
-                                        Search
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Patient Select Dropdown -->
-                            <div id="patientSelectContainer" class="mt-1">
-                                <select id="patientSelect" name="patient_select"
-                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border">
-                                    <option value="">Select Patient</option>
-                                    @foreach ($patients as $patient)
-                                        <option value="{{ $patient->id }}" data-uhid="{{ $patient->uhid }}"
-                                            data-name="{{ $patient->full_name }}" data-gender="{{ $patient->gender }}"
-                                            data-age="{{ $patient->age }}" data-mobile="{{ $patient->mobile }}"
-                                            data-prakriti="{{ $patient->prakriti }}"
-                                            data-allergies="{{ $patient->allergies }}"
-                                            data-photo="{{ $patient->photo_path }}">
-                                            {{ $patient->full_name }} ({{ $patient->uhid }}) - {{ $patient->mobile }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
                             <!-- Patient Search Input -->
-                            <div id="patientSearchInputContainer" class="mt-1 hidden">
+                            <div id="patientSearchInputContainer" class="mt-1">
                                 <div class="flex">
                                     <input type="text" id="patientSearch"
                                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-ayur-green-500 focus:ring focus:ring-ayur-green-200 focus:ring-opacity-50 p-2 border"
@@ -499,10 +469,11 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"
-                                        onclick="viewTreatmentPlan({{ $plan->id }})">
+                                    <a href="{{ route('treatment-plan.tracker', $plan->id) }}"
+                                        class="text-ayur-green-600 hover:text-ayur-green-900 mr-3"
+                                        title="View Treatment Tracker">
                                         <i class="fa-solid fa-eye"></i>
-                                    </button>
+                                    </a>
 
                                     {{-- edit button --}}
                                     <a href="{{ route('treatment-plan.edit', $plan->id) }}"
@@ -634,5 +605,39 @@
                 });
             });
         });
+
+        // Initialize day-wise schedule data for edit mode
+        @if ($isEdit)
+            // Load existing day-wise schedule data if available
+            if (typeof dayWiseSchedule !== 'undefined') {
+                @if ($editTreatmentPlan->day_wise_schedule && count($editTreatmentPlan->day_wise_schedule) > 0)
+                    dayWiseSchedule = @json($editTreatmentPlan->day_wise_schedule);
+                    console.log('Loaded existing day-wise schedule:', dayWiseSchedule);
+                @else
+                    // If no existing schedule, create one from dates (like create mode)
+                    const startDate = $('#startDate').val();
+                    const endDate = $('#endDate').val();
+                    if (startDate && endDate) {
+                        console.log('Creating new day-wise schedule for edit mode');
+                        generateDayWiseSchedule();
+                    }
+                @endif
+
+                // Update the display and hidden input
+                if (dayWiseSchedule.length > 0) {
+                    updateDayWiseDisplay();
+                    updateDayWiseScheduleInput();
+                } else {
+                    // Fallback: if still no schedule, try to generate from dates
+                    const startDate = $('#startDate').val();
+                    const endDate = $('#endDate').val();
+                    if (startDate && endDate) {
+                        generateDayWiseSchedule();
+                        updateDayWiseDisplay();
+                        updateDayWiseScheduleInput();
+                    }
+                }
+            }
+        @endif
     </script>
 @endsection

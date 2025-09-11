@@ -26,19 +26,21 @@
         <div id="pharmacyTabs" class="mb-6">
             <div class="border-b border-gray-200">
                 <nav class="flex flex-wrap -mb-px">
-                    <button class="py-2 px-4 border-b-2 border-ayur-green-500 text-ayur-green-600 font-medium">
+                    <a href="{{ route('pharmacy') }}"
+                        class="py-2 px-4 border-b-2 border-ayur-green-500 text-ayur-green-600 font-medium">
                         Medicine Inventory
-                    </button>
-
+                    </a>
                     <a href="{{ route('pharmacy.dispense') }}"
                         class="btn py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Dispense Medication
                     </a>
 
-                    <button
-                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
+                    <a href="{{ route('pharmacy.restock') }}"
+                        class="btn py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Restock Purchase
-                    </button>
+                    </a>
+
+
                 </nav>
             </div>
         </div>

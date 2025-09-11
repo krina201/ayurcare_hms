@@ -688,23 +688,33 @@
 
             // Form submission validation
             form.addEventListener('submit', function(e) {
-                if (!validateForm()) {
-                    e.preventDefault();
+                    // Check if this is a Save as Draft submission
+                    const isDraftSubmission = e.submitter && e.submitter.name === 'save_as_draft';
 
-                    // Scroll to first error
-                    const firstError = document.querySelector('.js-error[style*="display: block"]');
-                    if (firstError) {
-                        firstError.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
+                    // Always run validation to show errors
+                    const isValid = validateForm();
+
+                    if (!isValid) {
+                        // Scroll to first error
+                        const firstError = document.querySelector('.js-error[style*="display: block"]');
+                        if (firstError) {
+                            firstError.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                        }
+
+                        // Only prevent submission for regular submit button, not for Save as Draft
+                        if (!isDraftSubmission) {
+                            e.preventDefault();
+                            return;
+                        }
+                        // For Save as Draft, continue with submission even if validation fails
                     }
 
-
-                } else {
                     // Show loading state
-                    const submitBtn = e.target.querySelector('button[type="submit"]:focus') ||
-                        e.target.querySelector('button[type="submit"]:not([name="save_as_draft"])');
+                    const submitBtn = e.submitter || e.target.querySelector(
+                        'button[type="submit"]:not([name="save_as_draft"])');
                     const originalText = submitBtn.innerHTML;
 
                     submitBtn.disabled = true;
@@ -718,15 +728,14 @@
                 }
             });
 
-            // Auto-save draft functionality (optional)
-            let autoSaveTimer;
-            form.addEventListener('input', function() {
-                clearTimeout(autoSaveTimer);
-                autoSaveTimer = setTimeout(() => {
-                    // You can implement auto-save draft functionality here
-                    console.log('Auto-save draft...');
-                }, 30000); // 30 seconds delay
-            });
+        // Auto-save draft functionality (optional)
+        let autoSaveTimer; form.addEventListener('input', function() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                // You can implement auto-save draft functionality here
+                console.log('Auto-save draft...');
+            }, 30000); // 30 seconds delay
+        });
         });
     </script>
 @endsection

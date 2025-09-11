@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class TherapistAssignment extends Model
@@ -32,15 +33,16 @@ class TherapistAssignment extends Model
 
     protected $casts = [
         'assignment_date' => 'date',
-        'start_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
-        'duration_minutes' => 'integer'
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
+        'duration_minutes' => 'integer',
+        'materials_required' => 'array'
     ];
 
     // Relationships
     public function treatmentPlan(): BelongsTo
     {
-        return $this->belongsTo(TreatmentPlan::class);
+        return $this->belongsTo(TreatmentPlan::class, 'treatment_plan_id');
     }
 
     public function patient(): BelongsTo
@@ -61,6 +63,11 @@ class TherapistAssignment extends Model
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    public function treatmentSessions()
+    {
+        return $this->hasMany(TreatmentTracker::class, 'therapist_assignment_id');
     }
 
     // Scopes
@@ -120,6 +127,7 @@ class TherapistAssignment extends Model
     }
 
 
+
     public function getFormattedTimeSlotAttribute()
     {
         return Carbon::parse($this->start_time)->format('H:i') . ' - ' . Carbon::parse($this->end_time)->format('H:i');
@@ -139,5 +147,45 @@ class TherapistAssignment extends Model
     public function canCancel()
     {
         return in_array($this->status, [0, 4]); // Pending, Preparing
+    }
+
+    // Get treatment category name with proper validation
+    public function getTreatmentCategoryNameAttribute()
+    {
+        // Check if treatment plan exists and matches patient_id
+        if ($this->treatmentPlan && $this->treatmentPlan->patient_id == $this->patient_id) {
+            return $this->treatmentPlan->treatmentCategory->name ?? $this->treatment_details;
+        }
+
+        // Fallback to treatment_details if no valid treatment plan
+        return $this->treatment_details;
+    }
+
+    // Safe accessor for materials_required
+    public function getMaterialsUsedTextAttribute()
+    {
+        if (!$this->materials_required || !is_array($this->materials_required)) {
+            return 'None';
+        }
+
+        $materialsUsed = $this->materials_required['materials_used'] ?? [];
+
+        if (empty($materialsUsed)) {
+            return 'None';
+        }
+
+        return collect($materialsUsed)->map(function ($material) {
+            return $material['name'] . ' (' . $material['quantity'] . ' ' . $material['unit'] . ')';
+        })->implode(', ');
+    }
+
+    // Safe accessor for treatment_details
+    public function getTreatmentDetailsTextAttribute()
+    {
+        if (empty($this->treatment_details)) {
+            return 'No details available';
+        }
+
+        return Str::limit($this->treatment_details, 100);
     }
 }

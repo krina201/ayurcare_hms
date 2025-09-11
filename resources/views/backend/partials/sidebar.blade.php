@@ -84,9 +84,9 @@
 
             {{-- billing management --}}
             <li>
-                <a href="{{ route('billing.index') }}"
+                <a href="{{ route('bill') }}"
                     class="flex items-center p-2 text-base font-medium rounded-lg cursor-pointer
-                           {{ request()->routeIs('billing*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
+                           {{ request()->routeIs('bill*') ? 'text-stone-800 bg-green-100' : 'text-stone-700 hover:bg-green-100' }}">
                     <i class="fa-solid fa-file-invoice w-6 text-green-700"></i>
                     <span class="ml-3">{{ __('Billing') }}</span>
                 </a>

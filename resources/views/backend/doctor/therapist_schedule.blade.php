@@ -57,6 +57,20 @@
                     </ul>
                 </div>
             @endif
+            {{-- 
+            @if ($assignments->isNotEmpty())
+                <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded border border-blue-200">
+                    <i class="fa-solid fa-info-circle mr-2"></i>
+                    Showing {{ $assignments->count() }} therapist assignments for {{ $carbonDate->format('F j, Y') }}
+                </div>
+            @else
+                <div class="bg-yellow-50 text-yellow-700 px-4 py-2 rounded border border-yellow-200">
+                    <i class="fa-solid fa-exclamation-triangle mr-2"></i>
+                    No therapist assignments found for {{ $carbonDate->format('F j, Y') }}.
+                    <a href="{{ route('doctor.therapist-assignment') }}" class="underline hover:no-underline">Create new
+                        assignments</a>
+                </div>
+            @endif --}}
         </div>
         <!-- TABS -->
         <div id="therapistTabs" class="mb-6">
@@ -71,10 +85,10 @@
                         Therapist Schedule
 
                     </a>
-                    <button
-                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
+                    <a href="{{ route('doctor.treatment-room') }}"
+                        class="py-2 px-4 border-b-2 {{ request()->routeIs('doctor.treatment-room') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
                         Treatment Rooms
-                    </button>
+                    </a>
                 </nav>
             </div>
         </div>
@@ -153,14 +167,15 @@
                                         <div class="bg-ayur-green-100 border-l-4 border-ayur-green-500 rounded-lg p-3">
                                             <div class="flex items-center mb-1">
                                                 <img class="h-6 w-6 rounded-full mr-2"
-                                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg' }}"
+                                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg' }}"
                                                     alt="">
                                                 <span
                                                     class="text-sm font-medium text-ayur-brown-800">{{ $assignment->patient->full_name }}</span>
                                             </div>
                                             <p class="text-xs text-ayur-brown-600">
-                                                {{ $assignment->treatment_details }} •
-                                                {{ $assignment->room->room_name ?? 'Room TBD' }}</p>
+                                                {{ $assignment->treatment_category_name }}
+                                                •
+                                                {{ $assignment->room->room_number ?? 'Room TBD' }}</p>
                                             <p class="text-xs text-ayur-green-700">
                                                 {{ $assignment->duration_minutes }} mins</p>
                                         </div>
@@ -189,14 +204,15 @@
                                         <div class="bg-ayur-yellow-100 border-l-4 border-ayur-yellow-500 rounded-lg p-3">
                                             <div class="flex items-center mb-1">
                                                 <img class="h-6 w-6 rounded-full mr-2"
-                                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg' }}"
+                                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg' }}"
                                                     alt="">
                                                 <span
                                                     class="text-sm font-medium text-ayur-brown-800">{{ $assignment->patient->full_name }}</span>
                                             </div>
                                             <p class="text-xs text-ayur-brown-600">
-                                                {{ $assignment->treatment_details }} •
-                                                {{ $assignment->room->room_name ?? 'Room TBD' }}</p>
+                                                {{ $assignment->treatment_category_name }}
+                                                •
+                                                {{ $assignment->room->room_number ?? 'Room TBD' }}</p>
                                             <p class="text-xs text-ayur-yellow-700">
                                                 {{ $assignment->duration_minutes }} mins</p>
                                         </div>
@@ -225,14 +241,15 @@
                                         <div class="bg-orange-100 border-l-4 border-orange-500 rounded-lg p-3">
                                             <div class="flex items-center mb-1">
                                                 <img class="h-6 w-6 rounded-full mr-2"
-                                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg' }}"
+                                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg' }}"
                                                     alt="">
                                                 <span
                                                     class="text-sm font-medium text-ayur-brown-800">{{ $assignment->patient->full_name }}</span>
                                             </div>
                                             <p class="text-xs text-ayur-brown-600">
-                                                {{ $assignment->treatment_details }} •
-                                                {{ $assignment->room->room_name ?? 'Room TBD' }}</p>
+                                                {{ $assignment->treatment_category_name }}
+                                                •
+                                                {{ $assignment->room->room_number ?? 'Room TBD' }}</p>
                                             <p class="text-xs text-orange-700">{{ $assignment->duration_minutes }}
                                                 mins</p>
                                         </div>
@@ -274,14 +291,15 @@
                                         <div class="bg-pink-100 border-l-4 border-pink-500 rounded-lg p-3">
                                             <div class="flex items-center mb-1">
                                                 <img class="h-6 w-6 rounded-full mr-2"
-                                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg' }}"
+                                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg' }}"
                                                     alt="">
                                                 <span
                                                     class="text-sm font-medium text-ayur-brown-800">{{ $assignment->patient->full_name }}</span>
                                             </div>
                                             <p class="text-xs text-ayur-brown-600">
-                                                {{ $assignment->treatment_details }} •
-                                                {{ $assignment->room->room_name ?? 'Room TBD' }}</p>
+                                                {{ $assignment->treatment_category_name }}
+                                                •
+                                                {{ $assignment->room->room_number ?? 'Room TBD' }}</p>
                                             <p class="text-xs text-pink-700">{{ $assignment->duration_minutes }}
                                                 mins</p>
                                         </div>
@@ -310,14 +328,15 @@
                                         <div class="bg-indigo-100 border-l-4 border-indigo-500 rounded-lg p-3">
                                             <div class="flex items-center mb-1">
                                                 <img class="h-6 w-6 rounded-full mr-2"
-                                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg' }}"
+                                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg' }}"
                                                     alt="">
                                                 <span
                                                     class="text-sm font-medium text-ayur-brown-800">{{ $assignment->patient->full_name }}</span>
                                             </div>
                                             <p class="text-xs text-ayur-brown-600">
-                                                {{ $assignment->treatment_details }} •
-                                                {{ $assignment->room->room_name ?? 'Room TBD' }}</p>
+                                                {{ $assignment->treatment_category_name }}
+                                                •
+                                                {{ $assignment->room->room_number ?? 'Room TBD' }}</p>
                                             <p class="text-xs text-indigo-700">{{ $assignment->duration_minutes }}
                                                 mins</p>
                                         </div>
@@ -346,14 +365,15 @@
                                         <div class="bg-teal-100 border-l-4 border-teal-500 rounded-lg p-3">
                                             <div class="flex items-center mb-1">
                                                 <img class="h-6 w-6 rounded-full mr-2"
-                                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg' }}"
+                                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg' }}"
                                                     alt="">
                                                 <span
                                                     class="text-sm font-medium text-ayur-brown-800">{{ $assignment->patient->full_name }}</span>
                                             </div>
                                             <p class="text-xs text-ayur-brown-600">
-                                                {{ $assignment->treatment_details }} •
-                                                {{ $assignment->room->room_name ?? 'Room TBD' }}</p>
+                                                {{ $assignment->treatment_category_name }}
+                                                •
+                                                {{ $assignment->room->room_number ?? 'Room TBD' }}</p>
                                             <p class="text-xs text-teal-700">{{ $assignment->duration_minutes }}
                                                 mins</p>
                                         </div>
@@ -382,14 +402,15 @@
                                         <div class="bg-purple-100 border-l-4 border-purple-500 rounded-lg p-3">
                                             <div class="flex items-center mb-1">
                                                 <img class="h-6 w-6 rounded-full mr-2"
-                                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg' }}"
+                                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg' }}"
                                                     alt="">
                                                 <span
                                                     class="text-sm font-medium text-ayur-brown-800">{{ $assignment->patient->full_name }}</span>
                                             </div>
                                             <p class="text-xs text-ayur-brown-600">
-                                                {{ $assignment->treatment_details }} •
-                                                {{ $assignment->room->room_name ?? 'Room TBD' }}</p>
+                                                {{ $assignment->treatment_category_name }}
+                                                •
+                                                {{ $assignment->room->room_number ?? 'Room TBD' }}</p>
                                             <p class="text-xs text-purple-700">{{ $assignment->duration_minutes }}
                                                 mins</p>
                                         </div>
@@ -425,21 +446,22 @@
                 </div>
 
                 <div class="p-4 space-y-4 max-h-96 overflow-y-auto">
-                    @forelse($assignments as $assignment)
+                    @forelse($todaysAppointments as $assignment)
                         <div
                             class="flex items-center justify-between p-3 border border-ayur-green-200 bg-ayur-green-50 rounded-lg">
                             <div class="flex items-center">
                                 <div class="w-3 h-3 bg-ayur-green-500 rounded-full mr-3"></div>
                                 <img class="h-10 w-10 rounded-full mr-3"
-                                    src="{{ $assignment->patient->photo_path ? asset('storage/' . $assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg' }}"
+                                    src="{{ $assignment->patient->photo_path ? asset($assignment->patient->photo_path) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg' }}"
                                     alt="">
                                 <div>
                                     <p class="font-medium text-ayur-brown-800">
                                         {{ $assignment->patient->full_name }}</p>
-                                    <p class="text-sm text-ayur-brown-600">{{ $assignment->treatment_details }}
+                                    <p class="text-sm text-ayur-brown-600">
+                                        {{ $assignment->treatment_category_name }}
                                         with {{ $assignment->therapist->full_name }}</p>
                                     <p class="text-xs text-ayur-brown-500">
-                                        {{ $assignment->room->room_name ?? 'Room TBD' }} •
+                                        {{ $assignment->room->room_number ?? 'Room TBD' }} •
                                         {{ \Carbon\Carbon::parse($assignment->start_time)->format('g:i A') }} -
                                         {{ \Carbon\Carbon::parse($assignment->end_time)->format('g:i A') }}</p>
                                 </div>
@@ -477,7 +499,7 @@
                 <div class="p-4 space-y-4">
                     @foreach ($therapists as $therapist)
                         @php
-                            $therapistAssignments = $assignments->where('therapist_id', $therapist->id);
+                            $therapistAssignments = $todaysAppointments->where('therapist_id', $therapist->id);
                             $status = $therapistAssignments->where('status', 1)->isNotEmpty() ? 'busy' : 'available';
                             $statusText = $status === 'busy' ? 'Busy' : 'Available';
                             $statusClass =
@@ -487,7 +509,7 @@
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center">
                                     <img class="h-8 w-8 rounded-full mr-2"
-                                        src="{{ $therapist->photo ? asset('storage/' . $therapist->photo) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg' }}"
+                                        src="{{ $therapist->photo ? asset($therapist->photo) : 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg' }}"
                                         alt="">
                                     <span class="font-medium text-ayur-brown-800">{{ $therapist->full_name }}</span>
                                 </div>

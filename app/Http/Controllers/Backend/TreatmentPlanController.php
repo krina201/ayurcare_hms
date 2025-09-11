@@ -9,6 +9,7 @@ use App\Models\Doctor;
 use App\Models\Medicine;
 use App\Models\MasterRoom;
 use App\Models\MasterTreatmentCategory;
+use App\Services\PatientSearchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -20,13 +21,19 @@ use Exception;
 
 class TreatmentPlanController extends Controller
 {
+    protected $patientSearchService;
+
+    public function __construct(PatientSearchService $patientSearchService)
+    {
+        $this->patientSearchService = $patientSearchService;
+    }
     /**
      * Display a listing of treatment plans
      */
     public function index(Request $request)
     {
         $pagename = 'Treatment Plan';
-        $breadcrumb = 'Treatment Plan List';
+        $breadcrumb = 'Treatment Plan';
 
         // Get recent treatment plans for the table with soft deleted patients
         $recentTreatmentPlans = TreatmentPlan::with(['patient' => function ($query) {
@@ -76,7 +83,7 @@ class TreatmentPlanController extends Controller
             'special_instructions' => 'nullable|string',
             'recommended_therapist' => 'nullable|exists:doctors,id',
             'room_allocation' => 'nullable|exists:master_rooms,id',
-            'day_wise_schedule' => 'nullable',
+            'day_wise_schedule' => 'required',
             'consent_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB max
         ], [
             'patient_id.required' => 'Patient selection is required.',
@@ -88,6 +95,7 @@ class TreatmentPlanController extends Controller
             'end_date.required' => 'End date is required.',
             'end_date.after_or_equal' => 'End date must be after or equal to start date.',
             'dosha_report.required' => 'Dosha report is required.',
+            'day_wise_schedule.required' => 'Day wise schedule is required.',
             'recommended_therapist.exists' => 'Selected therapist does not exist.',
             'room_allocation.exists' => 'Selected room does not exist.',
             'consent_file.mimes' => 'Consent file must be PDF, JPG, JPEG, or PNG.',
@@ -246,8 +254,23 @@ class TreatmentPlanController extends Controller
             'special_instructions' => 'required|string',
             'recommended_therapist' => 'required|exists:doctors,id',
             'room_allocation' => 'required|exists:master_rooms,id',
-            'day_wise_schedule' => 'nullable',
+            'day_wise_schedule' => 'required',
             'consent_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB max
+        ], [
+            'patient_id.required' => 'Patient selection is required.',
+            'patient_id.exists' => 'Selected patient does not exist.',
+            'treatment_category.required' => 'Treatment category is required.',
+            'treatment_category.exists' => 'Selected treatment category does not exist.',
+            'procedure_name.required' => 'Procedure name is required.',
+            'start_date.required' => 'Start date is required.',
+            'end_date.required' => 'End date is required.',
+            'end_date.after_or_equal' => 'End date must be after or equal to start date.',
+            'dosha_report.required' => 'Dosha report is required.',
+            'day_wise_schedule.required' => 'Day wise schedule is required.',
+            'recommended_therapist.exists' => 'Selected therapist does not exist.',
+            'room_allocation.exists' => 'Selected room does not exist.',
+            'consent_file.mimes' => 'Consent file must be PDF, JPG, JPEG, or PNG.',
+            'consent_file.max' => 'Consent file size must not exceed 5MB.',
         ]);
 
         if ($validator->fails()) {
@@ -276,7 +299,7 @@ class TreatmentPlanController extends Controller
         $oilsRequired = $data['oils_required'] ?? [];
         $herbsRequired = $data['herbs_required'] ?? [];
 
-        // Handle day_wise_schedule
+        // Handle day_wise_schedule - it might come as JSON string
         $dayWiseSchedule = [];
         if (!empty($data['day_wise_schedule'])) {
             if (is_string($data['day_wise_schedule'])) {
@@ -334,118 +357,7 @@ class TreatmentPlanController extends Controller
     //  Search patient by UHID or name
     public function searchPatient(Request $request)
     {
-        try {
-            // Log the incoming request
-            Log::info("Treatment plan patient search request received", [
-                'method' => $request->method(),
-                'url' => $request->fullUrl(),
-                'query' => $request->all(),
-                'user_agent' => $request->userAgent(),
-                'ip' => $request->ip()
-            ]);
-
-            $query = trim($request->get('query', ''));
-
-            if (empty($query) || strlen($query) < 2) {
-                Log::info("Treatment plan patient search: Query too short or empty", ['query' => $query]);
-                return response()->json([]);
-            }
-
-            // Sanitize the query to prevent SQL injection
-            $query = strip_tags($query);
-
-            // Log the search attempt for debugging
-            Log::info("Treatment plan patient search attempt", [
-                'query' => $query,
-                'user_id' => Auth::id(),
-                'timestamp' => now()
-            ]);
-
-            // Check if Patient model exists and is accessible
-            if (!class_exists(Patient::class)) {
-                Log::error("Patient model not found");
-                throw new \Exception("Patient model not accessible");
-            }
-
-            // Check database connection
-            try {
-                DB::connection()->getPdo();
-            } catch (\Exception $e) {
-                Log::error("Database connection failed: " . $e->getMessage());
-                throw new \Exception("Database connection failed");
-            }
-
-            // Search for patients with better error handling
-            $patients = Patient::where(function ($q) use ($query) {
-                $q->where('uhid', 'LIKE', "%{$query}%")
-                    ->orWhere('full_name', 'LIKE', "%{$query}%")
-                    ->orWhere('mobile', 'LIKE', "%{$query}%");
-            })
-                ->select([
-                    'id',
-                    'uhid',
-                    'full_name',
-                    'gender',
-                    'age',
-                    'mobile',
-                    'prakriti',
-                    'allergies',
-                    'photo_path'
-                ])
-                ->limit(10)
-                ->get();
-
-            // Log the search results for debugging
-            Log::info("Treatment plan patient search results", [
-                'query' => $query,
-                'count' => $patients->count(),
-                'results' => $patients->toArray()
-            ]);
-
-            // If no results found, return empty array
-            if ($patients->isEmpty()) {
-                Log::info("Treatment plan patient search: No results found", ['query' => $query]);
-                return response()->json([]);
-            }
-
-            // Format the results
-            $formattedPatients = $patients->map(function ($patient) {
-                return [
-                    'id' => $patient->id,
-                    'uhid' => $patient->uhid ?? 'N/A',
-                    'full_name' => $patient->full_name ?? 'N/A',
-                    'gender' => $patient->gender ?? 'N/A',
-                    'age' => $patient->age ?? 'N/A',
-                    'mobile' => $patient->mobile ?? 'N/A',
-                    'prakriti' => $patient->prakriti ?? 'N/A',
-                    'allergies' => $patient->allergies ?? 'None',
-                    'photo_path' => $patient->photo_path ?? null
-                ];
-            });
-
-            Log::info("Treatment plan patient search: Returning formatted results", [
-                'query' => $query,
-                'formatted_count' => $formattedPatients->count()
-            ]);
-
-            return response()->json($formattedPatients);
-        } catch (\Exception $e) {
-            Log::error('Treatment plan patient search error: ' . $e->getMessage(), [
-                'query' => $request->get('query'),
-                'user_id' => Auth::id(),
-                'trace' => $e->getTraceAsString(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return response()->json([
-                'error' => 'An error occurred while searching patients',
-                'message' => $e->getMessage(),
-                'debug_info' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            ], 500);
-        }
+        return $this->patientSearchService->searchPatients($request, 'treatment-plan');
     }
 
 

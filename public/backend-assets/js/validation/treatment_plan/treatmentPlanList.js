@@ -12,23 +12,11 @@ $(document).ready(function () {
     initializeValidation();
     initializeEditMode();
 
-    // Patient selection tab functionality
-    $('#selectTab').on('click', function () {
-        $(this).removeClass('bg-gray-100 text-gray-700 border-gray-300')
-            .addClass('bg-ayur-green-100 text-ayur-green-700 border-ayur-green-300');
-        $('#searchTab').removeClass('bg-ayur-green-100 text-ayur-green-700 border-ayur-green-300')
-            .addClass('bg-gray-100 text-gray-700 border-gray-300');
 
-        $('#patientSelectContainer').removeClass('hidden');
-        $('#patientSearchInputContainer').addClass('hidden');
-        hidePatientResults();
-    });
 
     $('#searchTab').on('click', function () {
         $(this).removeClass('bg-gray-100 text-gray-700 border-gray-300')
             .addClass('bg-ayur-green-100 text-ayur-green-700 border-ayur-green-300');
-        $('#selectTab').removeClass('bg-ayur-green-100 text-ayur-green-700 border-ayur-green-300')
-            .addClass('bg-gray-100 text-gray-700 border-gray-300');
 
         $('#patientSelectContainer').addClass('hidden');
         $('#patientSearchInputContainer').removeClass('hidden');
@@ -107,6 +95,10 @@ $(document).ready(function () {
                 e.preventDefault();
                 return false;
             }
+
+            // Update hidden input with current day-wise schedule before submission
+            updateDayWiseScheduleInput();
+
             // Let the form submit normally (don't prevent default)
             return true;
         } else {
@@ -184,6 +176,14 @@ $(document).ready(function () {
 
         // Remove from display
         $card.remove();
+
+        // Update hidden input
+        updateDayWiseScheduleInput();
+
+        // Trigger validation after removing procedure
+        setTimeout(() => {
+            validateDayWiseSchedule();
+        }, 100);
     });
 
     // Edit day date
@@ -246,6 +246,14 @@ $(document).ready(function () {
 
                 console.log(`Removed Day ${dayNumber} from schedule`);
 
+                // Update hidden input
+                updateDayWiseScheduleInput();
+
+                // Trigger validation after removing day
+                setTimeout(() => {
+                    validateDayWiseSchedule();
+                }, 100);
+
                 Swal.fire({
                     title: 'Removed!',
                     text: `Day ${dayNumber} has been removed from the schedule.`,
@@ -304,10 +312,11 @@ $(document).ready(function () {
                 }
             }
 
-            // Generate day-wise schedule if dates are available
+            // Generate day-wise schedule if dates are available (always create like in create mode)
             const startDate = $('#startDate').val();
             const endDate = $('#endDate').val();
             if (startDate && endDate) {
+                // Always generate schedule in edit mode, just like create mode
                 generateDayWiseSchedule();
             }
         }
@@ -620,10 +629,20 @@ $(document).ready(function () {
             }
 
             updateDayWiseDisplay();
+
+            // Trigger validation after generating schedule
+            setTimeout(() => {
+                validateDayWiseSchedule();
+            }, 100);
         } else {
             // Clear schedule if dates are invalid
             dayWiseSchedule = [];
             $('#dayWiseSchedule').empty();
+
+            // Trigger validation after clearing schedule
+            setTimeout(() => {
+                validateDayWiseSchedule();
+            }, 100);
         }
     }
 
@@ -635,6 +654,9 @@ $(document).ready(function () {
         if (dayWiseSchedule.length === 0) {
             return;
         }
+
+        // Update hidden input field for form submission
+        updateDayWiseScheduleInput();
 
         dayWiseSchedule.forEach((day, index) => {
             const dayHtml = `
@@ -690,6 +712,15 @@ $(document).ready(function () {
         });
     }
 
+    // Update hidden input field with day-wise schedule data
+    function updateDayWiseScheduleInput() {
+        const hiddenInput = $('#dayWiseScheduleInput');
+        if (hiddenInput.length) {
+            hiddenInput.val(JSON.stringify(dayWiseSchedule));
+            console.log('Updated hidden input with day-wise schedule:', dayWiseSchedule);
+        }
+    }
+
     // Add new day
     function addNewDay() {
         const newDayNumber = dayWiseSchedule.length + 1;
@@ -703,6 +734,14 @@ $(document).ready(function () {
         });
 
         updateDayWiseDisplay();
+
+        // Update hidden input
+        updateDayWiseScheduleInput();
+
+        // Trigger validation after adding new day
+        setTimeout(() => {
+            validateDayWiseSchedule();
+        }, 100);
     }
 
     // Add procedure to day
@@ -844,6 +883,14 @@ $(document).ready(function () {
         // Close modal and update display
         closeProcedureModal();
         updateDayWiseDisplay();
+
+        // Update hidden input
+        updateDayWiseScheduleInput();
+
+        // Trigger validation after adding/editing procedure
+        setTimeout(() => {
+            validateDayWiseSchedule();
+        }, 100);
 
         showAlert('success', `Procedure ${procedureIndex !== null ? 'updated' : 'added'} successfully!`);
     }
@@ -1063,12 +1110,12 @@ $(document).ready(function () {
             //     type: 'checkbox',
             //     message: 'Please select at least one herb'
             // },
-            special_instructions: {
-                required: true,
-                minLength: 5,
-                maxLength: 1000,
-                message: 'Special instructions are required and must be between 5-1000 characters'
-            },
+            // special_instructions: {
+            //     required: true,
+            //     // minLength: 5,
+            //     // maxLength: 1000,
+            //     message: 'Special instructions are required'
+            // },
             recommended_therapist: {
                 required: true,
                 message: 'Please select a recommended therapist'
@@ -1083,6 +1130,12 @@ $(document).ready(function () {
                 allowedTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'],
                 maxSize: 5242880, // 5MB in bytes
                 message: 'Consent file is required (PDF, JPG, JPEG, PNG, max 5MB)'
+            },
+            day_wise_schedule: {
+                required: true,
+                type: 'array',
+                minLength: 1,
+                message: 'Day-wise treatment schedule is required'
             }
         };
 
@@ -1151,6 +1204,14 @@ $(document).ready(function () {
         // Herbs validation
         $('input[name="herbs_required[]"]').on('change', function () {
             validateCheckboxGroup('herbs_required', 'input[name="herbs_required[]"]:checked');
+        });
+
+        // Day-wise schedule validation (triggered when schedule changes)
+        $(document).on('click', '.add-procedure-btn, .remove-procedure-btn, .remove-day-btn', function () {
+            // Small delay to allow the schedule to update
+            setTimeout(() => {
+                validateDayWiseSchedule();
+            }, 100);
         });
     }
 
@@ -1226,6 +1287,33 @@ $(document).ready(function () {
 
         // Special handling for checkbox groups
         updateCheckboxGroupValidation(fieldName, selector, isValid, errorMessage);
+        return isValid;
+    }
+
+    // Validate day-wise schedule
+    function validateDayWiseSchedule() {
+        const rule = validationRules['day_wise_schedule'];
+        if (!rule) return true;
+
+        let isValid = true;
+        let errorMessage = '';
+
+        // Check if schedule exists and has at least one day
+        if (rule.required && (!dayWiseSchedule || dayWiseSchedule.length === 0)) {
+            isValid = false;
+            errorMessage = rule.message || 'Day-wise treatment schedule is required';
+        }
+
+        // Check if schedule has at least one procedure across all days
+        if (isValid && dayWiseSchedule.length > 0) {
+            const hasProcedures = dayWiseSchedule.some(day => day.procedures && day.procedures.length > 0);
+            if (!hasProcedures) {
+                isValid = false;
+                errorMessage = 'At least one procedure must be added to the day-wise schedule';
+            }
+        }
+
+        updateDayWiseScheduleValidation(isValid, errorMessage);
         return isValid;
     }
 
@@ -1515,12 +1603,23 @@ $(document).ready(function () {
             }
         }
 
-        // Validate day-wise schedule (optional but should have at least one day if specified)
+        // Validate day-wise schedule (required)
         if (dayWiseSchedule.length === 0) {
             // Auto-generate if dates are provided
             if (startDate && endDate) {
                 generateDayWiseSchedule();
             }
+
+            // Check again after auto-generation
+            if (dayWiseSchedule.length === 0) {
+                isFormValid = false;
+                errors.push('Day-wise treatment schedule is required');
+                // Show error for day-wise schedule section
+                updateDayWiseScheduleValidation(false, 'Day-wise treatment schedule is required');
+            }
+        } else {
+            // Clear any existing error for day-wise schedule
+            updateDayWiseScheduleValidation(true, '');
         }
 
         // If form is invalid, scroll to first error (no popup)
@@ -1543,6 +1642,33 @@ $(document).ready(function () {
 
     // Validation summary removed - only show field-level errors
 
+    // Update day-wise schedule validation display
+    function updateDayWiseScheduleValidation(isValid, errorMessage) {
+        const $container = $('#dayWiseSchedule').closest('.space-y-4 > div');
+
+        // Remove existing error and styling
+        $container.find('.validation-error').remove();
+        $('#dayWiseSchedule').removeClass('border border-red-500 border-green-500 rounded p-2');
+
+        if (!isValid) {
+            // Add red border to day-wise schedule container
+            $('#dayWiseSchedule').addClass('border border-red-500 rounded p-2');
+
+            // Add error message
+            const errorHtml = `
+                <div class="validation-error mt-2 text-sm text-red-600">
+                    ${errorMessage}
+                </div>
+            `;
+            $container.append(errorHtml);
+            validationErrors['day_wise_schedule'] = errorMessage;
+        } else {
+            // Add green border for valid schedule
+            $('#dayWiseSchedule').addClass('border border-green-500 rounded p-2');
+            validationErrors['day_wise_schedule'] = null;
+        }
+    }
+
     // Clear all validation errors
     function clearValidationErrors() {
         $('.validation-error').remove();
@@ -1557,37 +1683,11 @@ $(document).ready(function () {
         // Clear file upload styling
         $('.border-dashed').removeClass('border-red-500 border-green-500');
 
+        // Clear day-wise schedule styling
+        $('#dayWiseSchedule').removeClass('border border-red-500 border-green-500 rounded p-2');
+
         validationErrors = {};
     }
-
-    // Reset form and validation
-    // function resetForm() {
-    //     // Clear form data
-    //     $('#treatmentPlanForm')[0].reset();
-
-    //     // Clear global variables
-    //     selectedPatient = null;
-    //     consentFile = null;
-    //     dayWiseSchedule = [];
-
-    //     // Clear displays
-    //     $('#patientDisplay').empty();
-    //     $('#consentPreview').empty();
-    //     $('#dayWiseSchedule').empty();
-
-    //     // Clear validation
-    //     clearValidationErrors();
-
-    //     // Reset to default tab
-    //     $('#selectTab').click();
-
-    //     // Reinitialize form
-    //     initializeForm();
-
-    //     // Ensure end date is blank
-    //     $('#endDate').val('');
-    // }
-
 
 
     // Enhanced validation for special cases

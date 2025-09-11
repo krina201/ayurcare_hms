@@ -34,10 +34,10 @@
                         Therapist Schedule
 
                     </a>
-                    <button
-                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
+                    <a href="{{ route('doctor.treatment-room') }}"
+                        class="py-2 px-4 border-b-2 {{ request()->routeIs('doctor.treatment-room') ? 'border-ayur-green-500 text-ayur-green-600' : 'border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300' }} font-medium">
                         Treatment Rooms
-                    </button>
+                    </a>
                 </nav>
             </div>
         </div>

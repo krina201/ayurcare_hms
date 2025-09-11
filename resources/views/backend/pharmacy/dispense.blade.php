@@ -3,6 +3,26 @@
 @section('content')
     <!-- MAIN CONTENT -->
     <main class="p-4">
+        <div class="mb-4">
+            @if (session('success'))
+                <div class="bg-green-50 text-green-700 px-4 py-2 rounded border border-green-200">{{ session('success') }}
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="bg-red-50 text-red-700 px-4 py-2 rounded border border-red-200">{{ session('error') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="bg-red-50 text-red-700 px-4 py-2 rounded border border-red-200">
+                    <ul class="list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+
+
         <!-- TABS -->
         <div id="pharmacyTabs" class="mb-6">
             <div class="border-b border-gray-200">
@@ -11,14 +31,15 @@
                         class="btn py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Medicine Inventory
                     </a>
-                    <a class="py-2 px-4 border-b-2 border-ayur-green-500 text-ayur-green-600 font-medium">
+                    <a href="{{ route('pharmacy.dispense') }}"
+                        class="py-2 px-4 border-b-2 border-ayur-green-500 text-ayur-green-600 font-medium">
                         Dispense Medication
                     </a>
 
-                    <button
-                        class="py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
+                    <a href="{{ route('pharmacy.restock') }}"
+                        class="btn py-2 px-4 border-b-2 border-transparent text-ayur-brown-600 hover:text-ayur-brown-800 hover:border-ayur-brown-300">
                         Restock Purchase
-                    </button>
+                    </a>
                 </nav>
             </div>
         </div>

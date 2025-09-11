@@ -7,17 +7,17 @@
         }
 
         /* .error-field::after {
-                                                                    content: '';
-                                                                    position: absolute;
-                                                                    top: 0;
-                                                                    left: 0;
-                                                                    right: 0;
-                                                                    bottom: 0;
-                                                                    border: 1px solid #ef4444;
-                                                                    border-radius: 0.375rem;
-                                                                    pointer-events: none;
-                                                                    animation: errorPulse 0.5s ease-in-out;
-                                                                } */
+                                                                        content: '';
+                                                                        position: absolute;
+                                                                        top: 0;
+                                                                        left: 0;
+                                                                        right: 0;
+                                                                        bottom: 0;
+                                                                        border: 1px solid #ef4444;
+                                                                        border-radius: 0.375rem;
+                                                                        pointer-events: none;
+                                                                        animation: errorPulse 0.5s ease-in-out;
+                                                                    } */
 
         @keyframes errorPulse {
             0% {
@@ -1484,11 +1484,11 @@
                                 <h6 class="text-sm font-medium text-ayur-brown-800 mb-2">Morning (${doctorSchedule.morning_from} - ${doctorSchedule.morning_to})</h6>
                                 <div class="grid grid-cols-4 gap-2">
                                     ${timeSlots.morning.map(slot => `
-                                                                                                                                                                                            <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
-                                                                                                                                                                                                <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
-                                                                                                                                                                                                ${slot.formatted_time || slot.time}
-                                                                                                                                                                                            </label>
-                                                                                                                                                                                        `).join('')}
+                                                                                                                                                                                                <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
+                                                                                                                                                                                                    <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
+                                                                                                                                                                                                    ${slot.formatted_time || slot.time}
+                                                                                                                                                                                                </label>
+                                                                                                                                                                                            `).join('')}
                                 </div>
                             </div>
                         `;
@@ -1505,10 +1505,10 @@
                                 <h6 class="text-sm font-medium text-ayur-brown-800 mb-2">Evening (${doctorSchedule.evening_from} - ${doctorSchedule.evening_to})</h6>
                                 <div class="grid grid-cols-4 gap-2">
                                     ${timeSlots.evening.map(slot => `
-                                                                                                                <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
-                                                                                                                    <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
-                                                                                                                    ${slot.formatted_time || slot.time}
-                                                                                                                </label> `).join('')}
+                                                                                                                    <label class="time-slot-option ${slot.is_available ? 'bg-ayur-green-100 text-ayur-green-800 hover:bg-ayur-green-200 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} rounded p-2 text-center text-xs border ${slot.is_available ? 'border-ayur-green-300' : 'border-gray-300'}">
+                                                                                                                        <input type="radio" name="appointment_time" value="${slot.time}" class="hidden" ${slot.is_available ? '' : 'disabled'} required>
+                                                                                                                        ${slot.formatted_time || slot.time}
+                                                                                                                    </label> `).join('')}
                                 </div>
                             </div>
                         `;
@@ -2011,77 +2011,6 @@
 
             // Initialize server-side error handling on page load
             handleServerSideErrors();
-
-            // Test button for patient search
-            // const testPatientSearchBtn = document.getElementById('testPatientSearch');
-            // if (testPatientSearchBtn) {
-            //     testPatientSearchBtn.addEventListener('click', function() {
-            //         console.log('Testing patient search...');
-            //         const testQueries = ['AYR', 'test', 'john', '123'];
-            //         const randomQuery = testQueries[Math.floor(Math.random() * testQueries.length)];
-
-            //         if (patientSearch) {
-            //             patientSearch.value = randomQuery;
-            //             patientSearch.dispatchEvent(new Event('input'));
-            //             console.log('Test query set:', randomQuery);
-            //         }
-            //     });
-            // }
-
-            // Test button for patient search route
-            // const testPatientRouteBtn = document.getElementById('testPatientRoute');
-            // if (testPatientRouteBtn) {
-            //     testPatientRouteBtn.addEventListener('click', function() {
-            //         console.log('Testing patient search route...');
-
-            //         fetch('{{ route('appointment.test-search') }}', {
-            //                 method: 'GET',
-            //                 headers: {
-            //                     'X-Requested-With': 'XMLHttpRequest',
-            //                     'Accept': 'application/json',
-            //                 },
-            //                 credentials: 'same-origin'
-            //             })
-            //             .then(response => {
-            //                 console.log('Test route response status:', response.status);
-            //                 return response.json();
-            //             })
-            //             .then(data => {
-            //                 console.log('Test route response:', data);
-            //                 alert(
-            //                     `Route test result: ${data.status}\nMessage: ${data.message}\nPatient count: ${data.patient_count || 'N/A'}`
-            //                 );
-            //             })
-            //             .catch(error => {
-            //                 console.error('Test route error:', error);
-            //                 alert(`Route test failed: ${error.message}`);
-            //             });
-            //     });
-            // }
-
-            // Clear patient search button
-            // const clearPatientSearchBtn = document.getElementById('clearPatientSearch');
-            // if (clearPatientSearchBtn) {
-            //     clearPatientSearchBtn.addEventListener('click', function() {
-            //         console.log('Clearing patient search...');
-            //         if (patientSearch) {
-            //             patientSearch.value = '';
-            //         }
-            //         if (selectedPatientId) {
-            //             selectedPatientId.value = '';
-            //         }
-            //         if (patientInfo) {
-            //             patientInfo.classList.add('hidden');
-            //         }
-            //         if (noPatientSelected) {
-            //             noPatientSelected.classList.remove('hidden');
-            //         }
-            //         if (searchResults) {
-            //             searchResults.classList.add('hidden');
-            //         }
-            //         clearError('patient_id');
-            //     });
-            // }
 
             // Test button for time slots
             const testTimeSlotsBtn = document.getElementById('testTimeSlots');

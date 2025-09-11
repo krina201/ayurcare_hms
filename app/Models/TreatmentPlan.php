@@ -126,11 +126,11 @@ class TreatmentPlan extends Model
     public function getStatusClassAttribute()
     {
         return match ($this->status) {
-            0 => 'bg-gray-100 text-gray-800',
+            0 => 'bg-gray-200 text-gray-700',
             1 => 'bg-ayur-green-100 text-ayur-green-800',
             2 => 'bg-blue-100 text-blue-800',
             3 => 'bg-red-100 text-red-800',
-            default => 'bg-gray-100 text-gray-800',
+            default => 'bg-gray-200 text-gray-700',
         };
     }
 
